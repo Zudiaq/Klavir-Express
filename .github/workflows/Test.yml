@@ -6,6 +6,14 @@ on:
 jobs:
   test-bot:
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ vars.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
+      OPENWEATHERMAP_API_KEY: ${{ vars.OPENWEATHERMAP_API_KEY }}
+      LASTFM_API_KEY: ${{ vars.LASTFM_API_KEY }}
+      LASTFM_API_SECRET: ${{ vars.LASTFM_API_SECRET }}
+      SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ vars.SPOTIFY_CLIENT_SECRET }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,13 +26,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Run test script
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ vars.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
-          OPENWEATHERMAP_API_KEY: ${{ vars.OPENWEATHERMAP_API_KEY }}
-          LASTFM_API_KEY: ${{ vars.LASTFM_API_KEY }}
-          LASTFM_API_SECRET: ${{ vars.LASTFM_API_SECRET }}
-          SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
-          SPOTIFY_CLIENT_SECRET: ${{ vars.SPOTIFY_CLIENT_SECRET }}
         run: |
           python test_script.py || exit 0
