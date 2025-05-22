@@ -18,6 +18,16 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     if album_name:
         query += f" {album_name}"
     cookies_path = os.getenv('COOKIES_FILE_PATH', 'cookies.txt')  
+    if not os.path.exists(cookies_path):
+        logging.error(f"Cookies file not found at {cookies_path}. Ensure the file exists and is accessible.")
+        return None
+    logging.info(f"Using cookies file at {cookies_path}")
+    try:
+        with open(cookies_path, 'r') as f:
+            logging.debug(f"Cookies file contents:\n{f.read()}")
+    except Exception as e:
+        logging.error(f"Failed to read cookies file: {e}")
+        return None
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
