@@ -14,6 +14,7 @@ env:
 jobs:
   send_weather_and_quote:
     runs-on: ubuntu-latest
+    environment: Deployment 1
     if: github.event.schedule == '30 6 * * *'
     steps:
       - name: Checkout repository
@@ -39,6 +40,7 @@ jobs:
 
   send_music:
     runs-on: ubuntu-latest
+    environment: Deployment 1
     if: github.event.schedule == '0 6-18/1 * * *'
     steps:
       - name: Checkout repository
