@@ -17,7 +17,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     query = f"{track_name} {artist_name} official audio"
     if album_name:
         query += f" {album_name}"
-    cookies_path = os.getenv('COOKIES_FILE_PATH', 'cookies.txt')  # Use environment variable for cookies file
+    cookies_path = os.getenv('COOKIES_FILE_PATH', 'cookies.txt')  
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -31,7 +31,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         }],
         'extract_flat': False,
         'nocheckcertificate': True,
-        'cookies': cookies_path,  # Use the cookies file path from the environment variable
+        'cookies': cookies_path,  
     }
     try:
         with YoutubeDL(ydl_opts) as ydl:
@@ -66,4 +66,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
                     return mp3_path
     except Exception as e:
         logging.error(f"YouTube download failed: {e}")
+    finally:
+        if os.path.exists(cookies_path):
+            os.remove(cookies_path)  # Delete cookies file after use
     return None
