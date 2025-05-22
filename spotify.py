@@ -54,13 +54,20 @@ def load_sent_songs():
     Returns a set of tuples (track_name, artist_name, album_name)
     """
     if not os.path.exists(SENT_SONGS_FILE):
+        logging.warning(f"Sent songs file not found. Initializing as an empty set.")
         return set()
     try:
         with open(SENT_SONGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+            if not data:  # Handle empty file
+                logging.warning(f"Sent songs file is empty. Initializing as an empty set.")
+                return set()
             return set(tuple(item) for item in data)
+    except json.JSONDecodeError as e:
+        logging.warning(f"Could not load sent songs file: {e}. Initializing as an empty set.")
+        return set()
     except Exception as e:
-        logging.warning(f"Could not load sent songs file: {e}")
+        logging.warning(f"Unexpected error while loading sent songs file: {e}")
         return set()
 
 
