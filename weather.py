@@ -6,7 +6,7 @@ from config import CITY, REGION, DEBUG_MODE
 
 load_dotenv()
 
-API_KEY = os.getenv("OPENWEATHERMAP_API_KEY")
+API_KEY = os.getenv("OPENWEATHERMAP_API_KEY")  
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
