@@ -17,6 +17,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     query = f"{track_name} {artist_name} official audio"
     if album_name:
         query += f" {album_name}"
+    cookies_path = os.getenv('COOKIES_FILE_PATH', 'cookies.txt')  # Use environment variable for cookies file
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -30,6 +31,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         }],
         'extract_flat': False,
         'nocheckcertificate': True,
+        'cookies': cookies_path,  # Use the cookies file path from the environment variable
     }
     try:
         with YoutubeDL(ydl_opts) as ydl:
