@@ -26,8 +26,16 @@ jobs:
       - name: Clone private repository
         run: |
           git clone https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/Zudiaq/Cookies.git private_repo
+      - name: List contents of private_repo
+        run: ls -R private_repo
       - name: Use cookies.txt
-        run: cp private_repo/Cookies.txt Cookies.txt 
+        run: |
+          cp private_repo/cookies.txt cookies.txt
+          echo "COOKIES_FILE_PATH=$(pwd)/cookies.txt" >> $GITHUB_ENV
+      - name: Verify cookies.txt
+        run: |
+          echo "Cookies file path: $(pwd)/cookies.txt"
+          cat cookies.txt || echo "cookies.txt is missing or empty"
       - name: Run test script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -39,6 +47,6 @@ jobs:
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
         run: |
           python test_script.py || exit 1
-      - name: Cleanup Cookies.txt
+      - name: Cleanup cookies.txt
         if: always()
-        run: rm -f Cookies.txt
+        run: rm -f cookies.txt
