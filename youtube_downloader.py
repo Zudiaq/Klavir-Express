@@ -41,7 +41,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         }],
         'extract_flat': False,
         'nocheckcertificate': True,
-        'cookies': cookies_path,  
+        'cookiefile': cookies_path,  # Correctly pass the cookies file
     }
     try:
         with YoutubeDL(ydl_opts) as ydl:
