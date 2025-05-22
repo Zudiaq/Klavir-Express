@@ -6,7 +6,7 @@ from config import DEBUG_MODE
 
 load_dotenv()
 
-LASTFM_API_KEY = os.getenv('LASTFM_API_KEY')
+LASTFM_API_KEY = os.getenv('LASTFM_API_KEY') 
 LASTFM_API_SECRET = os.getenv('LASTFM_API_SECRET')
 LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
 
