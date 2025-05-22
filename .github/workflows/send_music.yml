@@ -54,14 +54,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Clone private repository
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }} # Add this secret for the deploy key
         run: |
-          mkdir -p ~/.ssh
-          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          git clone git@github.com/Zudiaq/Cookies.git private_repo
+          git clone https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/Zudiaq/Cookies.git private_repo
       - name: Use cookies.txt
         run: cp private_repo/cookies.txt cookies.txt
       - name: Run send_music.py
