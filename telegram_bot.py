@@ -26,8 +26,8 @@ def send_message(message):
     if not ENABLE_TELEGRAM:
         logging.info("Telegram messaging is disabled in config")
         return None
-    token = os.getenv('TELEGRAM_BOT_TOKEN')
-    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    token = os.getenv('TELEGRAM_BOT_TOKEN')  
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')  
     if not token or not chat_id:
         logging.error("Telegram credentials are not set in environment variables")
         return None
@@ -55,8 +55,8 @@ def send_audio_with_caption(audio_path, caption):
     if not ENABLE_TELEGRAM:
         logging.info("Telegram messaging is disabled in config")
         return None
-    token = os.getenv('TELEGRAM_BOT_TOKEN')
-    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    token = os.getenv('TELEGRAM_BOT_TOKEN')  
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')  
     if not token or not chat_id:
         logging.error("Telegram credentials are not set in environment variables")
         return None
@@ -94,8 +94,8 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     if not ENABLE_TELEGRAM:
         logging.info("Telegram messaging is disabled in config")
         return None
-    token = os.getenv('TELEGRAM_BOT_TOKEN')
-    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    token = os.getenv('TELEGRAM_BOT_TOKEN')  
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')  
     if not token or not chat_id:
         logging.error("Telegram credentials are not set in environment variables")
         return None
