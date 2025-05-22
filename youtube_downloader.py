@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import requests
 from yt_dlp import YoutubeDL
 
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
@@ -22,12 +23,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         logging.error(f"Cookies file not found at {cookies_path}. Ensure the file exists and is accessible.")
         return None
     logging.info(f"Using cookies file at {cookies_path}")
-    try:
-        with open(cookies_path, 'r') as f:
-            logging.debug(f"Cookies file contents:\n{f.read()}")
-    except Exception as e:
-        logging.error(f"Failed to read cookies file: {e}")
-        return None
+    # Removed debug log for cookies file contents
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -75,8 +71,36 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
                 if os.path.exists(mp3_path):
                     return mp3_path
     except Exception as e:
-        logging.error(f"YouTube download failed: {e}")
+        if "cookies are no longer valid" in str(e).lower():
+            logging.error("The provided YouTube cookies are invalid or expired. Please export fresh cookies.")
+            logging.info("Refer to https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies for instructions.")
+            trigger_refresh_cookies_workflow()  # Trigger the workflow
+        else:
+            logging.error(f"YouTube download failed: {e}")
     finally:
         if os.path.exists(cookies_path):
             os.remove(cookies_path)  # Delete cookies file after use
     return None
+
+def trigger_refresh_cookies_workflow():
+    """
+    Trigger the workflow in the private repository to refresh cookies.
+    """
+    github_token = os.getenv('GITHUB_TOKEN')  # GitHub token for authentication
+    if not github_token:
+        logging.error("GITHUB_TOKEN is not set in environment variables.")
+        return
+    repo = "Zudiaq/Cookies"  # Replace with the private repo name
+    workflow = "refresh_cookies.yml"  # Replace with the workflow filename in the private repo
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow}/dispatches"
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    payload = {"ref": "main"}  # Replace 'main' with the branch name if different
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        logging.info("Successfully triggered the refresh cookies workflow.")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to trigger the refresh cookies workflow: {e}")
