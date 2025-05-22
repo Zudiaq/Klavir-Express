@@ -27,7 +27,7 @@ jobs:
         run: |
           git clone https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/Zudiaq/Cookies.git private_repo
       - name: Use cookies.txt
-        run: cp private_repo/Cookies.txt Cookies.txt #SA
+        run: cp private_repo/Cookies.txt Cookies.txt 
       - name: Run test script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
