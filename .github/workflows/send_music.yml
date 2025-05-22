@@ -12,41 +12,14 @@ env:
   API_SELECTION: ${{ vars.API_SELECTION }}
 
 jobs:
-  send_weather_and_quote:
+  test-bot:
     runs-on: ubuntu-latest
     environment: Deployment 1
-    if: github.event.schedule == '30 6 * * *'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run send_weather.py
-        run: python send_weather.py
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      - name: Run send_quote.py
-        run: python send_quote.py
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
-  send_music:
-    runs-on: ubuntu-latest
-    environment: Deployment 1
-    if: github.event.schedule == '0 6-18/1 * * *'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -56,9 +29,17 @@ jobs:
       - name: Clone private repository
         run: |
           git clone https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/Zudiaq/Cookies.git private_repo
+      - name: List contents of private_repo
+        run: ls -R private_repo
       - name: Use Cookies.txt
-        run: cp private_repo/Cookies.txt Cookies.txt
-      - name: Run send_music.py
+        run: |
+          cp private_repo/Cookies.txt Cookies.txt
+          echo "COOKIES_FILE_PATH=$(pwd)/Cookies.txt" >> $GITHUB_ENV
+      - name: Verify cookies.txt
+        run: |
+          echo "Cookies file path: $(pwd)/Cookies.txt"
+          cat Cookies.txt || echo "cookies.txt is missing or empty"
+      - name: Run test script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -68,7 +49,7 @@ jobs:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
         run: |
-          python send_music.py || exit 1
+          python test_script.py || exit 1
       - name: Cleanup Cookies.txt
         if: always()
         run: rm -f Cookies.txt
