@@ -23,12 +23,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Install annie and ffmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          curl -L https://github.com/iawia002/annie/releases/latest/download/annie-linux-amd64 -o /usr/local/bin/annie
-          chmod +x /usr/local/bin/annie
       - name: Run test script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
