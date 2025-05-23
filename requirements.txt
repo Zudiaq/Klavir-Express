@@ -1,4 +1,4 @@
-yt-dlp
+you-get
 mutagen
 python-dotenv
 requests
