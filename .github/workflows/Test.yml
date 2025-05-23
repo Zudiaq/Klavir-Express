@@ -23,19 +23,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Clone private repository
-        run: |
-          git clone https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/Zudiaq/Cookies.git private_repo
-      - name: List contents of private_repo
-        run: ls -R private_repo
-      - name: Use Cookies.txt
-        run: |
-          cp private_repo/Cookies.txt Cookies.txt
-          echo "COOKIES_FILE_PATH=$(pwd)/Cookies.txt" >> $GITHUB_ENV
-      - name: Verify cookies.txt
-        run: |
-          echo "Cookies file path: $(pwd)/Cookies.txt"
-          cat Cookies.txt || echo "cookies.txt is missing or empty"
       - name: Run test script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -45,8 +32,7 @@ jobs:
           LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          YOUTUBE_USERNAME: ${{ secrets.YOUTUBE_USERNAME }}
+          YOUTUBE_PASSWORD: ${{ secrets.YOUTUBE_PASSWORD }}
         run: |
           python test_script.py || exit 1
-      - name: Cleanup Cookies.txt
-        if: always()
-        run: rm -f Cookies.txt
