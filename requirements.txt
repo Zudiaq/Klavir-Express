@@ -3,4 +3,4 @@ python-dotenv
 requests
 logging
 translate
-youtube-dl
+yt-dlp
