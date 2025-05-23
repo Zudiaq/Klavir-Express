@@ -5,7 +5,7 @@ import subprocess
 
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
     """
-    Search YouTube for the specified track and download as MP3 using you-get and ffmpeg.
+    Search YouTube for the specified track and download as MP3 using annie.
     Args:
         track_name (str): Name of the track
         artist_name (str): Name of the artist
@@ -22,9 +22,9 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     logging.info(f"Searching YouTube for: {query}")
 
     try:
-        # Use you-get to download the first result
+        # Use annie to download the first result
         output_dir = os.getcwd()
-        command = ["you-get", "-o", output_dir, search_url]
+        command = ["annie", "-o", output_dir, search_url]
         logging.info(f"Running command: {' '.join(command)}")
         subprocess.run(command, check=True)
 
