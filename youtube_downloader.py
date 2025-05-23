@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 import subprocess
 
@@ -21,19 +20,21 @@ def record_youtube_stream(track_name, artist_name, album_name=None, duration_lim
     logging.info(f"Searching YouTube for: {query}")
 
     try:
-        # Step 1: Search YouTube for the video
-        search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
-        response = subprocess.run(
-            ["youtube-dl", "--get-url", search_url],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        stream_url = response.stdout.strip().split("\n")[0]
+        # Step 1: Use yt-dlp to search for the video and get the audio stream URL
+        command = [
+            "yt-dlp",
+            f"ytsearch:{query}",
+            "--get-url",
+            "--quiet",
+            "--format", "bestaudio"
+        ]
+        logging.info(f"Running command: {' '.join(command)}")
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        stream_url = result.stdout.strip()
         if not stream_url:
             logging.error("No stream URL found for the given query.")
             return None
-        logging.info(f"Found stream URL: {stream_url}")
+        logging.info(f"Found audio stream URL: {stream_url}")
 
         # Step 2: Record the stream using ffmpeg
         output_dir = os.getcwd()
@@ -41,9 +42,8 @@ def record_youtube_stream(track_name, artist_name, album_name=None, duration_lim
         command = [
             "ffmpeg",
             "-i", stream_url,
+            "-c", "copy",
             "-t", str(duration_limit),
-            "-q:a", "0",
-            "-map", "a",
             mp3_path
         ]
         logging.info(f"Running command: {' '.join(command)}")
@@ -56,7 +56,7 @@ def record_youtube_stream(track_name, artist_name, album_name=None, duration_lim
             logging.error("MP3 file not found after recording.")
             return None
     except subprocess.CalledProcessError as e:
-        logging.error(f"ffmpeg command failed: {e}")
+        logging.error(f"Command failed: {e}")
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
 
