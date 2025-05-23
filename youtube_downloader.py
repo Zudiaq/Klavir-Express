@@ -4,10 +4,11 @@ import logging
 import requests
 from pytube import Search, YouTube
 from yt_dlp import YoutubeDL
+from youtube_dl import YoutubeDL as LegacyYoutubeDL
 
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
     """
-    Search YouTube for the specified track and download as MP3, first using pytube, then yt-dlp as fallback.
+    Search YouTube for the specified track and download as MP3, testing multiple downloaders.
     Args:
         track_name (str): Name of the track
         artist_name (str): Name of the artist
@@ -46,9 +47,44 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     cookies_path = os.getenv('COOKIES_FILE_PATH', 'cookies.txt')
     if not os.path.exists(cookies_path):
         logging.error(f"Cookies file not found at {cookies_path}. Ensure the file exists and is accessible.")
-        return None
+    else:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'noplaylist': True,
+            'quiet': True,
+            'default_search': 'ytsearch5',
+            'outtmpl': '%(title)s.%(ext)s',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'cookiefile': cookies_path,
+        }
+        try:
+            with YoutubeDL(ydl_opts) as ydl:
+                search_results = ydl.extract_info(query, download=False)['entries']
+                for entry in search_results:
+                    if entry is None:
+                        continue
+                    duration = entry.get('duration')
+                    title = entry.get('title', '').lower()
+                    if duration and duration > duration_limit:
+                        continue
+                    if track_name.lower() in title and artist_name.lower() in title:
+                        if re.search(r'(live|concert|cover|remix|karaoke)', title):
+                            continue
+                        info = ydl.extract_info(entry['webpage_url'], download=True)
+                        filename = ydl.prepare_filename(info)
+                        mp3_path = re.sub(r'\.[^.]+$', '.mp3', filename)
+                        if os.path.exists(mp3_path):
+                            return mp3_path
+        except Exception as e:
+            logging.error(f"yt-dlp download failed: {e}")
 
-    ydl_opts = {
+    # Fallback to youtube_dl
+    logging.info("Falling back to youtube_dl for download")
+    ydl_opts_legacy = {
         'format': 'bestaudio/best',
         'noplaylist': True,
         'quiet': True,
@@ -59,11 +95,10 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'cookiefile': cookies_path,
     }
     try:
-        with YoutubeDL(ydl_opts) as ydl:
-            search_results = ydl.extract_info(query, download=False)['entries']
+        with LegacyYoutubeDL(ydl_opts_legacy) as ydl:
+            search_results = ydl.extract_info(f"ytsearch5:{query}", download=False)['entries']
             for entry in search_results:
                 if entry is None:
                     continue
@@ -80,7 +115,9 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
                     if os.path.exists(mp3_path):
                         return mp3_path
     except Exception as e:
-        logging.error(f"yt-dlp download failed: {e}")
+        logging.error(f"youtube_dl download failed: {e}")
+
+    logging.error("All download methods failed.")
     return None
 
 def trigger_refresh_cookies_workflow():
