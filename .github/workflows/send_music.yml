@@ -26,11 +26,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Install ffmpeg and yt-dlp
+      - name: Install Node.js and youtube-dl-exec
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          pip install yt-dlp
+          sudo apt-get install -y nodejs npm
+          npm install -g youtube-dl-exec
       - name: Run test script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
