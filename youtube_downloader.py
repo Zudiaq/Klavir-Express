@@ -24,7 +24,7 @@ def record_youtube_stream(track_name, artist_name, album_name=None, duration_lim
         output_dir = os.getcwd()
         mp3_path = os.path.join(output_dir, f"{track_name} - {artist_name}.mp3")
         command = [
-            "npx", "youtube-dl-exec",
+            "youtube-dl-exec",
             f"ytsearch:{query}",
             "--extract-audio",
             "--audio-format", "mp3",
