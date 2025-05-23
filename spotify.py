@@ -73,15 +73,49 @@ def load_sent_songs():
 
 def save_sent_song(track_name, artist_name, album_name):
     """
-    Save a new sent song to the JSON file.
+    Save a new sent song to the JSON file and update the public repository.
     """
     sent_songs = load_sent_songs()
     sent_songs.add((track_name, artist_name, album_name))
     try:
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
             json.dump(list(sent_songs), f, ensure_ascii=False, indent=2)
+        update_sent_songs_in_repo()
     except Exception as e:
         logging.warning(f"Could not save sent song: {e}")
+
+
+def update_sent_songs_in_repo():
+    """
+    Push the updated sent_songs.json file to the public repository.
+    """
+    github_token = os.getenv('KLAVIR_TOKEN')
+    if not github_token:
+        logging.error("KLAVIR_TOKEN is not set in environment variables.")
+        return
+    repo = "Zudiaq/Klavir-Express"
+    file_path = "sent_songs.json"
+    url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    try:
+        with open(SENT_SONGS_FILE, "r", encoding="utf-8") as f:
+            content = f.read()
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        sha = response.json().get("sha")
+        payload = {
+            "message": "Update sent_songs.json",
+            "content": content.encode("utf-8").decode("latin1"),
+            "sha": sha
+        }
+        response = requests.put(url, headers=headers, json=payload)
+        response.raise_for_status()
+        logging.info("Successfully updated sent_songs.json in the repository.")
+    except Exception as e:
+        logging.error(f"Failed to update sent_songs.json in the repository: {e}")
 
 
 def get_song_by_mood_spotify(mood):
