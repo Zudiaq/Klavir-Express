@@ -3,6 +3,9 @@ import re
 import logging
 import requests
 from yt_dlp import YoutubeDL
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
     """
@@ -18,12 +21,17 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     query = f"{track_name} {artist_name} official audio"
     if album_name:
         query += f" {album_name}"
-    cookies_path = os.getenv('COOKIES_FILE_PATH', 'cookies.txt')  
-    if not os.path.exists(cookies_path):
-        logging.error(f"Cookies file not found at {cookies_path}. Ensure the file exists and is accessible.")
+    
+    # Get YouTube credentials from environment variables
+    youtube_username = os.getenv('YOUTUBE_USERNAME')
+    youtube_password = os.getenv('YOUTUBE_PASSWORD')
+    
+    if not youtube_username or not youtube_password:
+        logging.error("YouTube credentials are not set in environment variables. Set YOUTUBE_USERNAME and YOUTUBE_PASSWORD.")
         return None
-    logging.info(f"Using cookies file at {cookies_path}")
-    # Removed debug log for cookies file contents
+        
+    logging.info(f"Using YouTube account authentication for {youtube_username}")
+    
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -37,7 +45,8 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         }],
         'extract_flat': False,
         'nocheckcertificate': True,
-        'cookiefile': cookies_path,  # Correctly pass the cookies file
+        'username': youtube_username,
+        'password': youtube_password,
     }
     try:
         with YoutubeDL(ydl_opts) as ydl:
@@ -71,36 +80,10 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
                 if os.path.exists(mp3_path):
                     return mp3_path
     except Exception as e:
-        if "cookies are no longer valid" in str(e).lower():
-            logging.error("The provided YouTube cookies are invalid or expired. Please export fresh cookies.")
-            logging.info("Refer to https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies for instructions.")
-            trigger_refresh_cookies_workflow()  # Trigger the workflow
+        if "authentication failed" in str(e).lower() or "login failed" in str(e).lower():
+            logging.error("YouTube authentication failed. Please check your username and password.")
         else:
             logging.error(f"YouTube download failed: {e}")
-    finally:
-        if os.path.exists(cookies_path):
-            os.remove(cookies_path)  # Delete cookies file after use
     return None
 
-def trigger_refresh_cookies_workflow():
-    """
-    Trigger the workflow in the private repository to refresh cookies.
-    """
-    github_token = os.getenv('GITHUB_TOKEN')  # GitHub token for authentication
-    if not github_token:
-        logging.error("GITHUB_TOKEN is not set in environment variables.")
-        return
-    repo = "Zudiaq/Cookies"  # Replace with the private repo name
-    workflow = "refresh_cookies.yml"  # Replace with the workflow filename in the private repo
-    url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow}/dispatches"
-    headers = {
-        "Authorization": f"Bearer {github_token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    payload = {"ref": "main"}  # Replace 'main' with the branch name if different
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        logging.info("Successfully triggered the refresh cookies workflow.")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to trigger the refresh cookies workflow: {e}")
+
