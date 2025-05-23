@@ -28,6 +28,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nodejs npm
           npm install -g youtube-dl-exec
+      - name: Verify youtube-dl-exec installation
+        run: |
+          which youtube-dl-exec
       - name: Run test script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
