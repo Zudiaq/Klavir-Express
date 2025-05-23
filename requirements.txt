@@ -4,5 +4,3 @@ python-dotenv
 requests
 logging
 translate
-pytube
-youtube_dl
