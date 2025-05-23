@@ -1,6 +1,7 @@
 import os
 import logging
 import subprocess
+from shutil import which
 
 def record_youtube_stream(track_name, artist_name, album_name=None, duration_limit=600):
     """
@@ -19,12 +20,18 @@ def record_youtube_stream(track_name, artist_name, album_name=None, duration_lim
 
     logging.info(f"Searching YouTube for: {query}")
 
+    # Locate youtube-dl-exec binary
+    youtube_dl_exec_path = which("youtube-dl-exec")
+    if not youtube_dl_exec_path:
+        logging.error("youtube-dl-exec is not installed or not in PATH.")
+        return None
+
     try:
         # Step 1: Use youtube-dl-exec to search and download the audio stream
         output_dir = os.getcwd()
         mp3_path = os.path.join(output_dir, f"{track_name} - {artist_name}.mp3")
         command = [
-            "youtube-dl-exec",
+            youtube_dl_exec_path,
             f"ytsearch:{query}",
             "--extract-audio",
             "--audio-format", "mp3",
