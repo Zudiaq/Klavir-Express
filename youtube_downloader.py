@@ -1,10 +1,11 @@
 import os
 import logging
 import subprocess
+import json
 
 def record_youtube_stream(track_name, artist_name, album_name=None, duration_limit=600):
     """
-    Record a YouTube livestream or video stream directly as MP3 using ffmpeg.
+    Record a YouTube livestream or video stream directly as MP3 using yt-dlp and ffmpeg.
     Args:
         track_name (str): Name of the track
         artist_name (str): Name of the artist
@@ -24,17 +25,28 @@ def record_youtube_stream(track_name, artist_name, album_name=None, duration_lim
         command = [
             "yt-dlp",
             f"ytsearch:{query}",
-            "--get-url",
+            "--print-json",
             "--quiet",
             "--format", "bestaudio"
         ]
         logging.info(f"Running command: {' '.join(command)}")
         result = subprocess.run(command, capture_output=True, text=True, check=True)
-        stream_url = result.stdout.strip()
-        if not stream_url:
-            logging.error("No stream URL found for the given query.")
+        output = result.stdout.strip()
+        if not output:
+            logging.error("No output from yt-dlp.")
             return None
-        logging.info(f"Found audio stream URL: {stream_url}")
+
+        # Parse the JSON output to extract the stream URL
+        try:
+            video_data = json.loads(output.splitlines()[0])  # Take the first result
+            stream_url = video_data.get("url")
+            if not stream_url:
+                logging.error("No stream URL found in yt-dlp output.")
+                return None
+            logging.info(f"Found audio stream URL: {stream_url}")
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to parse yt-dlp output: {e}")
+            return None
 
         # Step 2: Record the stream using ffmpeg
         output_dir = os.getcwd()
@@ -57,6 +69,7 @@ def record_youtube_stream(track_name, artist_name, album_name=None, duration_lim
             return None
     except subprocess.CalledProcessError as e:
         logging.error(f"Command failed: {e}")
+        logging.error(f"Command output: {e.stderr}")
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
 
