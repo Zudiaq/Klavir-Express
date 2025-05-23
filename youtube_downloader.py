@@ -3,9 +3,11 @@ import re
 import logging
 import requests
 
+YOUTUBE_DL_API_URL = "https://youtube-dl-api-server-url.com/download"  # Replace with the actual API URL
+
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
     """
-    Search YouTube for the specified track and download as MP3 using y2mate.
+    Search YouTube for the specified track and download as MP3 using youtube-dl-api.
     Args:
         track_name (str): Name of the track
         artist_name (str): Name of the artist
@@ -32,20 +34,18 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         video_url = f"https://www.youtube.com/watch?v={video_id.group(1)}"
         logging.info(f"Found video: {video_url}")
 
-        # Step 2: Use y2mate API to download the MP3
-        y2mate_api_url = "https://api.y2mate.com/api/v1/convert"
+        # Step 2: Use youtube-dl-api to download the MP3
         payload = {
             "url": video_url,
-            "format": "mp3",
-            "quality": "128kbps"
+            "format": "mp3"
         }
-        logging.info(f"Requesting MP3 conversion from y2mate for: {video_url}")
-        response = requests.post(y2mate_api_url, json=payload)
+        logging.info(f"Requesting MP3 conversion from youtube-dl-api for: {video_url}")
+        response = requests.post(YOUTUBE_DL_API_URL, json=payload)
         response.raise_for_status()
         data = response.json()
 
         if data.get("status") != "success" or "download_url" not in data:
-            logging.error("Failed to convert video to MP3 using y2mate.")
+            logging.error("Failed to convert video to MP3 using youtube-dl-api.")
             return None
 
         download_url = data["download_url"]
