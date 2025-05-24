@@ -142,15 +142,27 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
         logging.error("Could not determine Spotify track URL for spotDL download.")
         return None
     # Download the track using spotDL CLI
+    command = [
+        "spotdl", "download", spotify_url,
+        "--output", temp_dir,
+        "--bitrate", "320k"
+    ]
+    logging.info(f"Executing spotDL command: {' '.join(command)}")
+    
     try:
-        result = subprocess.run([
-            "spotdl", "download", spotify_url,
-            "--output", temp_dir,
-            "--bitrate", "320k"
-        ], capture_output=True, text=True, check=True)
-        logging.info(f"spotDL output: {result.stdout}")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"spotDL download failed: {e.stderr}")
+        result = subprocess.run(
+            command,
+            capture_output=True, text=True, check=False
+        )
+        logging.info(f"spotDL stdout:\n{result.stdout}")
+        logging.error(f"spotDL stderr:\n{result.stderr}")
+        
+        if result.returncode != 0:
+            logging.error(f"spotDL failed with return code {result.returncode}")
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return None
+    except Exception as e:
+        logging.error(f"Unexpected error during spotDL execution: {e}")
         shutil.rmtree(temp_dir, ignore_errors=True)
         return None
     # Find the downloaded MP3 file
