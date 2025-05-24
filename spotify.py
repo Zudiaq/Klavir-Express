@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 from config import DEBUG_MODE, SPOTIFY_PLAYLIST_URL
 import json
+import subprocess
+import shutil
 
 load_dotenv()
 
@@ -308,3 +310,37 @@ def fallback_search(mood, headers):
     except requests.exceptions.RequestException as e:
         logging.error(f"Error in fallback search: {e}")
         return None
+
+def download_song_spotdl(spotify_url):
+    """
+    Download a song using spotDL
+    
+    Args:
+        spotify_url (str): The Spotify URL of the song to download
+    """
+    # Create a temporary directory for the download
+    temp_dir = "temp_download"
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    try:
+        # Run the spotDL command to download the song
+        result = subprocess.run(
+            ["spotdl", "download", spotify_url, "--output", temp_dir, "--bitrate", "320k"],
+            capture_output=True, text=True, check=True
+        )
+        logging.info(f"spotDL output: {result.stdout}")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"spotDL download failed: {e.stderr}")
+        logging.debug(f"spotDL command: {e.cmd}")
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return None
+    
+    # Find the downloaded file (usually the only mp3 file in the directory)
+    for file_name in os.listdir(temp_dir):
+        if file_name.endswith(".mp3"):
+            downloaded_file = os.path.join(temp_dir, file_name)
+            logging.info(f"Downloaded song file: {downloaded_file}")
+            return downloaded_file
+    
+    logging.error("No mp3 file found in the downloaded content")
+    return None
