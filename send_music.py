@@ -6,7 +6,6 @@ from spotify import get_song_by_mood_spotify
 from lastfm import get_song_by_mood
 from telegram_bot import send_music_recommendation as send_to_telegram
 from config import DEFAULT_MUSIC_API
-from youtube_downloader import download_song_with_spotdl  # Fixed import
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,35 +17,25 @@ def process_music_recommendation():
     Process and send a music recommendation based on current weather and mood.
     Chooses the music API (Spotify or Last.fm) and sends the recommendation to Telegram.
     """
-    logging.info("Starting music recommendation process...")
+    logging.info("Processing music recommendation...")
     weather = get_weather()
     if weather:
-        logging.info(f"Weather data retrieved: {weather}")
         mood = map_weather_to_mood(weather)
-        logging.info(f"Determined mood based on weather: {mood}")
         music_api = os.getenv('API_SELECTION', DEFAULT_MUSIC_API)
-        logging.info(f"Using music API: {music_api}")
         if music_api.lower() == 'spotify':
             song = get_song_by_mood_spotify(mood)
         else:
             song = get_song_by_mood(mood)
         if song:
-            track_name, artist_name, album_name, album_image, preview_url, spotify_link = song
-            logging.info(f"Selected song: '{track_name}' by '{artist_name}' (Album: '{album_name}')")
-            mp3_path = download_song_with_spotdl(spotify_link)
-            if mp3_path:
-                logging.info(f"MP3 file downloaded successfully: {mp3_path}")
-                result = send_to_telegram(
-                    track_name, artist_name, album_name, album_image, preview_url, mood, spotify_link
-                )
-                logging.debug(f"Music recommendation send result: {result}")
-            else:
-                logging.error(f"Failed to download song: '{track_name}' by '{artist_name}'. Skipping.")
+            track_name, artist_name, album_name, album_image, preview_url = song
+            result = send_to_telegram(
+                track_name, artist_name, album_name, album_image, preview_url, mood
+            )
+            logging.debug(f"Music recommendation send result: {result}")
         else:
-            logging.error("Failed to retrieve song recommendation.")
+            logging.error("Failed to retrieve song.")
     else:
         logging.error("Failed to retrieve weather data.")
-    logging.info("Music recommendation process completed.")
 
 if __name__ == "__main__":
     process_music_recommendation()
