@@ -323,22 +323,28 @@ def download_song_spotdl(spotify_url):
     temp_dir = os.getenv("SPOTDL_DOWNLOAD_DIR", "temp_download")
     os.makedirs(temp_dir, exist_ok=True)
     
+    command = [
+        "spotdl", "download", spotify_url,
+        "--output", temp_dir,
+        "--bitrate", "320k"
+    ]
+    logging.info(f"Executing spotDL command: {' '.join(command)}")
+    
     try:
         # Run the spotDL command
         result = subprocess.run(
-            ["spotdl", "download", spotify_url, "--output", temp_dir, "--bitrate", "320k"],
+            command,
             capture_output=True, text=True, check=False
         )
-        logging.info(f"spotDL stdout: {result.stdout}")
-        logging.error(f"spotDL stderr: {result.stderr}")
+        logging.info(f"spotDL stdout:\n{result.stdout}")
+        logging.error(f"spotDL stderr:\n{result.stderr}")
         
         if result.returncode != 0:
             logging.error(f"spotDL failed with return code {result.returncode}")
             shutil.rmtree(temp_dir, ignore_errors=True)
             return None
-    except subprocess.CalledProcessError as e:
-        logging.error(f"spotDL download failed: {e.stderr}")
-        logging.debug(f"spotDL command: {e.cmd}")
+    except Exception as e:
+        logging.error(f"Unexpected error during spotDL execution: {e}")
         shutil.rmtree(temp_dir, ignore_errors=True)
         return None
     
