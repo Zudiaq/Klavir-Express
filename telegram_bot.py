@@ -1,7 +1,7 @@
 import mutagen
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB
-from youtube_downloader import record_youtube_stream
+from youtube_downloader import record_youtube_stream, download_song_with_spotdl
 import requests
 import os
 import logging
@@ -80,7 +80,7 @@ def send_audio_with_caption(audio_path, caption):
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
     Send a music recommendation to Telegram with available metadata.
-    Records the MP3 from YouTube, embeds metadata and cover, and sends the MP3 file.
+    Downloads the MP3 using spotdl, embeds metadata and cover, and sends the MP3 file.
     Args:
         track_name (str): Name of the track.
         artist_name (str): Name of the artist.
@@ -103,7 +103,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     message += f"\U0001F464 {artist_name}\n"
     if album_name:
         message += f"\U0001F4BF {album_name}\n"
-    mp3_path = record_youtube_stream(track_name, artist_name, album_name)
+    mp3_path = download_song_with_spotdl(track_name, artist_name, album_name)
     if mp3_path and os.path.exists(mp3_path):
         try:
             audio = MP3(mp3_path, ID3=ID3)
