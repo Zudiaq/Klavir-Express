@@ -311,6 +311,23 @@ def fallback_search(mood, headers):
         logging.error(f"Error in fallback search: {e}")
         return None
 
+def is_ffmpeg_installed():
+    """
+    Check if FFmpeg is installed and accessible from the command line.
+    Returns:
+        bool: True if FFmpeg is installed, False otherwise.
+    """
+    try:
+        result = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, check=True)
+        logging.debug(f"FFmpeg version: {result.stdout.splitlines()[0]}")
+        return True
+    except FileNotFoundError:
+        logging.error("FFmpeg is not installed. Please install FFmpeg to use spotDL.")
+        return False
+    except Exception as e:
+        logging.error(f"Unexpected error while checking FFmpeg installation: {e}")
+        return False
+
 def download_song_spotdl(spotify_url):
     """
     Download a song using spotDL
@@ -320,6 +337,10 @@ def download_song_spotdl(spotify_url):
     Returns:
         str: Path to the downloaded MP3 file, or None if download fails.
     """
+    if not is_ffmpeg_installed():
+        logging.error("FFmpeg is required for spotDL to function. Aborting download.")
+        return None
+
     temp_dir = os.getenv("SPOTDL_DOWNLOAD_DIR", "temp_download")
     os.makedirs(temp_dir, exist_ok=True)
     
@@ -331,7 +352,6 @@ def download_song_spotdl(spotify_url):
     logging.info(f"Executing spotDL command: {' '.join(command)}")
     
     try:
-        # Run the spotDL command
         result = subprocess.run(
             command,
             capture_output=True, text=True, check=False
