@@ -17,24 +17,15 @@ def sanitize_query(query):
     query = re.sub(r"\s+", " ", query).strip()
     return query
 
-def download_song_with_spotdl(track_name, artist_name, album_name=None):
+def download_song_with_spotdl(spotify_link):
     """
     Download a song directly from Spotify using spotdl.
     Args:
-        track_name (str): Name of the track
-        artist_name (str): Name of the artist
-        album_name (str, optional): Name of the album
+        spotify_link (str): Spotify track link.
     Returns:
-        str: Path to the downloaded MP3 file, or None if not found
+        str: Path to the downloaded MP3 file, or None if not found.
     """
-    query = f"{track_name} {artist_name}"
-    if album_name:
-        query += f" {album_name}"
-
-    # Sanitize the query
-    query = sanitize_query(query)
-
-    logging.info(f"Searching Spotify for: {query}")
+    logging.info(f"Downloading song from Spotify link: {spotify_link}")
 
     # Locate spotdl binary
     spotdl_path = which("spotdl")
@@ -49,8 +40,7 @@ def download_song_with_spotdl(track_name, artist_name, album_name=None):
             spotdl_path,
             "download",
             "--output", output_dir,
-            "--format", "mp3",
-            query  # Pass the query directly without additional quotes
+            spotify_link
         ]
         logging.info(f"Running command: {' '.join(command)}")
         subprocess.run(command, check=True)
@@ -58,7 +48,7 @@ def download_song_with_spotdl(track_name, artist_name, album_name=None):
         # Step 2: Find the downloaded MP3 file
         downloaded_files = [
             os.path.join(output_dir, f) for f in os.listdir(output_dir)
-            if f.endswith(".mp3") and track_name.lower() in f.lower() and artist_name.lower() in f.lower()
+            if f.endswith(".mp3")
         ]
         if downloaded_files:
             mp3_path = downloaded_files[0]
