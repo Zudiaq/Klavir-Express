@@ -5,10 +5,16 @@ on:
     - cron: '0 8-22/1,30 6-22/1 * * *' # Every 1.5 hours from 8:00 to 22:30 UTC+3:30 (Tehran)
     - cron: '0 8,9,10,11,12,13,14,15,16,17,18,19,20,21,22 * * *' # fallback for every hour
   workflow_dispatch:
+  
+env:
+  CITY: ${{ vars.CITY }}
+  REGION: ${{ vars.REGION }}
+  API_SELECTION: ${{ vars.API_SELECTION }}
 
 jobs:
   send_music:
     runs-on: ubuntu-latest
+    environment: Deployment 1
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -24,3 +30,11 @@ jobs:
           pip install -r requirements.txt
       - name: Run send_music.py
         run: python send_music.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
