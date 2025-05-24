@@ -317,30 +317,38 @@ def download_song_spotdl(spotify_url):
     
     Args:
         spotify_url (str): The Spotify URL of the song to download
+    Returns:
+        str: Path to the downloaded MP3 file, or None if download fails.
     """
-    # Create a temporary directory for the download
-    temp_dir = "temp_download"
+    temp_dir = os.getenv("SPOTDL_DOWNLOAD_DIR", "temp_download")
     os.makedirs(temp_dir, exist_ok=True)
     
     try:
-        # Run the spotDL command to download the song
+        # Run the spotDL command
         result = subprocess.run(
             ["spotdl", "download", spotify_url, "--output", temp_dir, "--bitrate", "320k"],
-            capture_output=True, text=True, check=True
+            capture_output=True, text=True, check=False
         )
-        logging.info(f"spotDL output: {result.stdout}")
+        logging.info(f"spotDL stdout: {result.stdout}")
+        logging.error(f"spotDL stderr: {result.stderr}")
+        
+        if result.returncode != 0:
+            logging.error(f"spotDL failed with return code {result.returncode}")
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return None
     except subprocess.CalledProcessError as e:
         logging.error(f"spotDL download failed: {e.stderr}")
         logging.debug(f"spotDL command: {e.cmd}")
         shutil.rmtree(temp_dir, ignore_errors=True)
         return None
     
-    # Find the downloaded file (usually the only mp3 file in the directory)
+    # Find the downloaded MP3 file
     for file_name in os.listdir(temp_dir):
         if file_name.endswith(".mp3"):
             downloaded_file = os.path.join(temp_dir, file_name)
             logging.info(f"Downloaded song file: {downloaded_file}")
             return downloaded_file
     
-    logging.error("No mp3 file found in the downloaded content")
+    logging.error("No MP3 file found in the downloaded content")
+    shutil.rmtree(temp_dir, ignore_errors=True)
     return None
