@@ -36,7 +36,7 @@ def download_song_with_spotdl(spotify_link):
     try:
         # Step 1: Use spotdl to download the song
         output_dir = os.getcwd()
-        output_template = os.path.join(output_dir, "{artist} - {track}.mp3")
+        output_template = os.path.join(output_dir, "{artist} - {title}.mp3")
         command = [
             spotdl_path,
             "download",
