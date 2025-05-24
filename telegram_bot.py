@@ -77,7 +77,7 @@ def send_audio_with_caption(audio_path, caption):
         logging.error(f"Error sending audio: {e}")
         return None
 
-def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
+def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None, spotify_link=None):
     """
     Send a music recommendation to Telegram with available metadata.
     Downloads the MP3 using spotdl, embeds metadata and cover, and sends the MP3 file.
@@ -88,6 +88,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
         album_image (str, optional): URL of the album cover image.
         preview_url (str, optional): URL of the track preview.
         mood (str, optional): Mood associated with the recommendation.
+        spotify_link (str, optional): Spotify track link.
     Returns:
         dict: Telegram API response or None if error.
     """
@@ -103,7 +104,9 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     message += f"\U0001F464 {artist_name}\n"
     if album_name:
         message += f"\U0001F4BF {album_name}\n"
-    mp3_path = download_song_with_spotdl(track_name, artist_name, album_name)
+    if spotify_link:
+        message += f"\U0001F517 <a href='{spotify_link}'>Listen on Spotify</a>\n"
+    mp3_path = download_song_with_spotdl(spotify_link)
     if mp3_path and os.path.exists(mp3_path):
         try:
             audio = MP3(mp3_path, ID3=ID3)
