@@ -35,8 +35,7 @@ def download_song_with_spotdl(track_name, artist_name, album_name=None):
             spotdl_path,
             "download",
             "--output", output_dir,
-            "--audio", "mp3",
-            "--bitrate", "320k",
+            "--format", "mp3",
             query
         ]
         logging.info(f"Running command: {' '.join(command)}")
