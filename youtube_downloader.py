@@ -67,5 +67,5 @@ def download_song_with_spotdl(spotify_link):
         except Exception as e:
             logging.error(f"An unexpected error occurred with provider '{provider}': {e}")
 
-    logging.error("All download methods failed.")
+    logging.error(f"All download methods failed for Spotify link: {spotify_link}. Skipping this song.")
     return None
