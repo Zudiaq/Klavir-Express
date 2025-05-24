@@ -1,7 +1,7 @@
 import mutagen
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB
-from youtube_downloader import record_youtube_stream, download_song_with_spotdl
+from youtube_downloader import download_song_with_spotdl
 import requests
 import os
 import logging
