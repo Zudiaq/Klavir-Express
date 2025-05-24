@@ -50,10 +50,10 @@ def download_song_with_spotdl(track_name, artist_name, album_name=None):
             "download",
             "--output", output_dir,
             "--format", "mp3",
-            f'"{query}"'  # Pass the query as a single string
+            query  # Pass the query directly without additional quotes
         ]
         logging.info(f"Running command: {' '.join(command)}")
-        subprocess.run(command, check=True, shell=True)
+        subprocess.run(command, check=True)
 
         # Step 2: Find the downloaded MP3 file
         downloaded_files = [
