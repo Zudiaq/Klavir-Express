@@ -2,6 +2,20 @@ import os
 import logging
 import subprocess
 from shutil import which
+import re
+
+def sanitize_query(query):
+    """
+    Sanitize the query to remove or escape problematic characters.
+    Args:
+        query (str): The query string to sanitize.
+    Returns:
+        str: Sanitized query string.
+    """
+    # Remove problematic characters like slashes, colons, and excessive whitespace
+    query = re.sub(r"[\/\\:]", " ", query)
+    query = re.sub(r"\s+", " ", query).strip()
+    return query
 
 def download_song_with_spotdl(track_name, artist_name, album_name=None):
     """
@@ -19,6 +33,9 @@ def download_song_with_spotdl(track_name, artist_name, album_name=None):
 
     # Filter out unwanted versions (live, karaoke, remix, etc.)
     query += " -live -karaoke -remix -cover"
+
+    # Sanitize the query
+    query = sanitize_query(query)
 
     logging.info(f"Searching Spotify for: {query}")
 
