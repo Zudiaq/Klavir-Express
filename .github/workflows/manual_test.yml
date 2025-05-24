@@ -3,24 +3,15 @@ name: Manual Test
 on:
   workflow_dispatch:
 
+env:
+  CITY: ${{ vars.CITY }}
+  REGION: ${{ vars.REGION }}
+  API_SELECTION: ${{ vars.API_SELECTION }}
+
 jobs:
   manual-test:
     runs-on: ubuntu-latest
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
-      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
-      LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
-      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
-      API_SELECTION: ${{ secrets.API_SELECTION }}
-      CITY: ${{ secrets.CITY }}
-      REGION: ${{ secrets.REGION }}
-      DEBUG_MODE: ${{ secrets.DEBUG_MODE }}
-      ENABLE_TELEGRAM: ${{ secrets.ENABLE_TELEGRAM }}
-      DEFAULT_MUSIC_API: ${{ secrets.DEFAULT_MUSIC_API }}
-      SPOTIFY_PLAYLIST_URL: ${{ secrets.SPOTIFY_PLAYLIST_URL }}
+    environment: Deployment 1
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -35,3 +26,11 @@ jobs:
       - name: Run test script
         run: |
           python test_script.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
