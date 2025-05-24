@@ -91,7 +91,7 @@ def update_sent_songs_in_repo():
     """
     github_token = os.getenv('KLAVIR_TOKEN')
     if not github_token:
-        logging.error("KLAVIR_TOKEN is not set in environment variables.")
+        logging.error("KLAVIR_TOKEN is not set in environment variables. Skipping repository update.")
         return
     repo = "Zudiaq/Klavir-Express"
     file_path = "sent_songs.json"
