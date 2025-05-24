@@ -1,83 +1,66 @@
-import os
-import logging
-import subprocess
-from shutil import which
-import re
+# This module is deprecated. All YouTube/yt-dlp-based download logic has been removed and will be replaced by spotDL integration.
 
-def sanitize_query(query):
+def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
     """
-    Sanitize the query to remove or escape problematic characters.
+    Search YouTube for the specified track and download as MP3, filtering out long videos (e.g., concerts).
     Args:
-        query (str): The query string to sanitize.
+        track_name (str): Name of the track
+        artist_name (str): Name of the artist
+        album_name (str, optional): Name of the album
+        duration_limit (int): Maximum allowed duration in seconds (default 10 minutes)
     Returns:
-        str: Sanitized query string.
+        str: Path to the downloaded MP3 file, or None if not found
     """
-    # Remove problematic characters like slashes, colons, and excessive whitespace
-    query = re.sub(r"[\/\\:]", " ", query)
-    query = re.sub(r"\s+", " ", query).strip()
-    return query
-
-def download_song_with_spotdl(spotify_link):
-    """
-    Download a song directly from Spotify using spotdl.
-    Args:
-        spotify_link (str): Spotify track link.
-    Returns:
-        str: Path to the downloaded MP3 file, or None if not found.
-    """
-    logging.info(f"Starting download for Spotify link: {spotify_link}")
-
-    # Locate spotdl binary
-    spotdl_path = which("spotdl")
-    if not spotdl_path:
-        logging.error("spotdl is not installed or not in PATH.")
-        return None
-
-    # Ensure output directory exists
-    output_dir = os.getcwd()
-    if not os.path.exists(output_dir):
-        logging.error(f"Output directory does not exist: {output_dir}")
-        return None
-
-    audio_providers = ["youtube-music", "youtube"]  # Primary and fallback providers
-    output_template = os.path.join(output_dir, "{artist} - {title}")
-
-    for provider in audio_providers:
-        try:
-            # Step 1: Use spotdl to download the song
-            command = [
-                spotdl_path,
-                "download",
-                spotify_link,
-                "--output", f"{output_template}.mp3",
-                "--audio", provider
-            ]
-            logging.info(f"Running command with provider '{provider}': {' '.join(command)}")
-            result = subprocess.run(command, capture_output=True, text=True)
-
-            # Log command output
-            logging.debug(f"Command stdout: {result.stdout}")
-            logging.debug(f"Command stderr: {result.stderr}")
-
-            # Check for errors
-            if result.returncode != 0:
-                logging.error(f"Command failed with provider '{provider}': {result.stderr.strip()}")
-                continue
-
-            # Step 2: Find the downloaded MP3 file
-            downloaded_files = [
-                os.path.join(output_dir, f) for f in os.listdir(output_dir)
-                if f.endswith(".mp3")
-            ]
-            if downloaded_files:
-                mp3_path = downloaded_files[0]
-                logging.info(f"Downloaded MP3 file: {mp3_path}")
-                return mp3_path
-            else:
-                logging.error("MP3 file not found after downloading.")
-                return None
-        except Exception as e:
-            logging.error(f"An unexpected error occurred with provider '{provider}': {e}")
-
-    logging.error(f"All download methods failed for Spotify link: {spotify_link}. Skipping this song.")
+    query = f"{track_name} {artist_name} official audio"
+    if album_name:
+        query += f" {album_name}"
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'quiet': True,
+        'default_search': 'ytsearch5',
+        'outtmpl': '%(title)s.%(ext)s',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'extract_flat': False,
+        'nocheckcertificate': True,
+    }
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            search_results = ydl.extract_info(query, download=False)['entries']
+            for entry in search_results:
+                if entry is None:
+                    continue
+                duration = entry.get('duration')
+                title = entry.get('title', '').lower()
+                if duration and duration > duration_limit:
+                    continue
+                # Require both track and artist name in title, avoid live/concert/cover/remix/karaoke
+                if track_name.lower() in title and artist_name.lower() in title:
+                    if re.search(r'(live|concert|cover|remix|karaoke)', title):
+                        continue
+                    info = ydl.extract_info(entry['webpage_url'], download=True)
+                    filename = ydl.prepare_filename(info)
+                    mp3_path = re.sub(r'\.[^.]+$', '.mp3', filename)
+                    if os.path.exists(mp3_path):
+                        return mp3_path
+            # If no strict match, try the first short enough result
+            for entry in search_results:
+                if entry is None:
+                    continue
+                duration = entry.get('duration')
+                if duration and duration > duration_limit:
+                    continue
+                info = ydl.extract_info(entry['webpage_url'], download=True)
+                filename = ydl.prepare_filename(info)
+                mp3_path = re.sub(r'\.[^.]+$', '.mp3', filename)
+                if os.path.exists(mp3_path):
+                    return mp3_path
+    except Exception as e:
+        logging.error(f"YouTube download failed: {e}")
     return None
+
+# This module is deprecated. All YouTube/yt-dlp-based download logic has been removed and will be replaced by spotDL integration.
