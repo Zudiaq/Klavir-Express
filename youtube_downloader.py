@@ -40,8 +40,8 @@ def download_song_with_spotdl(spotify_link):
         command = [
             spotdl_path,
             "download",
-            "--output", f"{output_template}.mp3",
-            spotify_link
+            spotify_link,
+            "--output", f"{output_template}.mp3"
         ]
         logging.info(f"Running command: {' '.join(command)}")
         subprocess.run(command, check=True)
