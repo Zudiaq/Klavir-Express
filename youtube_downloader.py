@@ -31,9 +31,6 @@ def download_song_with_spotdl(track_name, artist_name, album_name=None):
     if album_name:
         query += f" {album_name}"
 
-    # Filter out unwanted versions (live, karaoke, remix, etc.)
-    query += " -live -karaoke -remix -cover"
-
     # Sanitize the query
     query = sanitize_query(query)
 
@@ -53,10 +50,10 @@ def download_song_with_spotdl(track_name, artist_name, album_name=None):
             "download",
             "--output", output_dir,
             "--format", "mp3",
-            query
+            f'"{query}"'  # Pass the query as a single string
         ]
         logging.info(f"Running command: {' '.join(command)}")
-        subprocess.run(command, check=True)
+        subprocess.run(command, check=True, shell=True)
 
         # Step 2: Find the downloaded MP3 file
         downloaded_files = [
