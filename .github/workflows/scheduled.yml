@@ -31,6 +31,7 @@ jobs:
       - name: Run send_music.py
         run: python send_music.py
         env:
+          SPOTDL_DOWNLOAD_DIR: ${{ runner.temp }}/spotdl_download
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
