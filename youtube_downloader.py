@@ -25,7 +25,7 @@ def download_song_with_spotdl(spotify_link):
     Returns:
         str: Path to the downloaded MP3 file, or None if not found.
     """
-    logging.info(f"Downloading song from Spotify link: {spotify_link}")
+    logging.info(f"Starting download for Spotify link: {spotify_link}")
 
     # Locate spotdl binary
     spotdl_path = which("spotdl")
@@ -53,7 +53,16 @@ def download_song_with_spotdl(spotify_link):
                 "--audio", provider
             ]
             logging.info(f"Running command with provider '{provider}': {' '.join(command)}")
-            subprocess.run(command, check=True)
+            result = subprocess.run(command, capture_output=True, text=True)
+
+            # Log command output
+            logging.debug(f"Command stdout: {result.stdout}")
+            logging.debug(f"Command stderr: {result.stderr}")
+
+            # Check for errors
+            if result.returncode != 0:
+                logging.error(f"Command failed with provider '{provider}': {result.stderr.strip()}")
+                continue
 
             # Step 2: Find the downloaded MP3 file
             downloaded_files = [
@@ -67,9 +76,6 @@ def download_song_with_spotdl(spotify_link):
             else:
                 logging.error("MP3 file not found after downloading.")
                 return None
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Command failed with provider '{provider}': {e}")
-            logging.error(f"YT-DLP error details: {e.stderr.decode('utf-8') if hasattr(e, 'stderr') else 'No additional details available.'}")
         except Exception as e:
             logging.error(f"An unexpected error occurred with provider '{provider}': {e}")
 
