@@ -33,8 +33,13 @@ def download_song_with_spotdl(spotify_link):
         logging.error("spotdl is not installed or not in PATH.")
         return None
 
-    audio_providers = ["youtube-music", "youtube"]  # Primary and fallback providers
+    # Ensure output directory exists
     output_dir = os.getcwd()
+    if not os.path.exists(output_dir):
+        logging.error(f"Output directory does not exist: {output_dir}")
+        return None
+
+    audio_providers = ["youtube-music", "youtube"]  # Primary and fallback providers
     output_template = os.path.join(output_dir, "{artist} - {title}")
 
     for provider in audio_providers:
@@ -64,6 +69,7 @@ def download_song_with_spotdl(spotify_link):
                 return None
         except subprocess.CalledProcessError as e:
             logging.error(f"Command failed with provider '{provider}': {e}")
+            logging.error(f"YT-DLP error details: {e.stderr.decode('utf-8') if hasattr(e, 'stderr') else 'No additional details available.'}")
         except Exception as e:
             logging.error(f"An unexpected error occurred with provider '{provider}': {e}")
 
