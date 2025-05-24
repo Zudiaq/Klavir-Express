@@ -27,9 +27,9 @@ def process_music_recommendation():
         else:
             song = get_song_by_mood(mood)
         if song:
-            track_name, artist_name, album_name, album_image, preview_url = song
+            track_name, artist_name, album_name, album_image, preview_url, spotify_link = song
             result = send_to_telegram(
-                track_name, artist_name, album_name, album_image, preview_url, mood
+                track_name, artist_name, album_name, album_image, preview_url, mood, spotify_link
             )
             logging.debug(f"Music recommendation send result: {result}")
         else:
