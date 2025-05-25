@@ -49,8 +49,8 @@ jobs:
           sudo apt update
           sudo apt install gh -y
       
-      - name: Manage YouTube cookies
-        run: python cookie_manager.py
+      - name: Update YouTube cookies
+        run: python update_cookies.py
 
       - name: Download YouTube content
         run: |
