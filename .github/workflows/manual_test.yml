@@ -21,7 +21,7 @@ jobs:
       LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
       SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
       SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
-      
+      YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -41,7 +41,8 @@ jobs:
 
       - name: Download YouTube content
         run: |
-          yt-dlp --default-search "ytsearch" --cookies "$env:YOUTUBE_COOKIES" --output "/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/%(title)s.%(ext)s" "<URL>"
+          echo ${{ secrets.YOUTUBE_COOKIES }} | base64 --decode > /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt
+          yt-dlp --default-search "ytsearch" --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --output "/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/%(title)s.%(ext)s" "<URL>"
           if [ $? -ne 0 ]; then
             echo "Cookies expired, updating..."
             base64 < ~/.cache/yt-dlp/youtube/cookies.txt | gh secret set "${{ secrets.YOUTUBE_COOKIES }}" --repo ${{ github.repository }} --token ${{ secrets.GH_PAT }}
