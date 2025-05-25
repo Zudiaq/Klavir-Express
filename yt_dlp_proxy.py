@@ -351,9 +351,12 @@ def get_best_proxies(providers):
             result = future.result()
             if result is not None:
                 best_proxies.append(result)
-                # Attempt download with the successful proxy
-                if attempt_download_with_proxy(result['proxy']):
-                    return [result]
+                try:
+                    # Attempt download with the successful proxy
+                    if attempt_download_with_proxy(result['proxy']):
+                        return [result]
+                except Exception as e:
+                    logging.error(f"Download attempt failed with proxy {result['proxy']}: {e}")
 
     # Sort by output length as a proxy for success
     if best_proxies:
