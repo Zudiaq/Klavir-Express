@@ -140,6 +140,27 @@ def test_proxy_with_yt_dlp(proxy):
         return None
 
 
+def attempt_download_with_proxy(proxy):
+    """Attempt to download using the given proxy and return success status."""
+    proxy_str = construct_proxy_string(proxy)
+    try:
+        result = subprocess.run(
+            ["yt-dlp", "--proxy", f"http://{proxy_str}", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode == 0:
+            logging.info("Download successful with proxy")
+            return True
+        else:
+            logging.error("Download failed with proxy")
+            return False
+    except Exception as e:
+        logging.error(f"Error during download attempt with proxy: {e}")
+        return False
+
+
 def update_proxies():
     """Update the proxies list and save the best ones."""
     try:
@@ -310,7 +331,6 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     return None
 
 
-# Update the get_best_proxies function to use the new test method
 def get_best_proxies(providers):
     """Return the top five proxies based on yt-dlp test results."""
     all_proxies = []
@@ -331,6 +351,9 @@ def get_best_proxies(providers):
             result = future.result()
             if result is not None:
                 best_proxies.append(result)
+                # Attempt download with the successful proxy
+                if attempt_download_with_proxy(result['proxy']):
+                    return [result]
 
     # Sort by output length as a proxy for success
     if best_proxies:
