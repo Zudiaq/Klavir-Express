@@ -1,7 +1,69 @@
-import os
-import re
-import logging
-from yt_dlp_proxy import search_and_download_youtube_mp3
+name: Klavir Workflow
 
-# The main functionality is now imported from yt_dlp_proxy.py
-# This file is kept for backward compatibility
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Run daily at 8:00 AM UTC
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  run-klavir:
+    name: Run Klavir Application
+    runs-on: ubuntu-latest
+    environment: Deployment 1
+    
+    env:
+      CITY: ${{ vars.CITY }}
+      REGION: ${{ vars.REGION }}
+      API_SELECTION: ${{ vars.API_SELECTION }}
+      SPOTDL_DOWNLOAD_DIR: /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Setup yt-dlp
+        uses: AnimMouse/setup-yt-dlp@v3
+        with:
+          ffmpeg: true
+          aria2: true
+      
+      - name: Setup yt-dlp YouTube cookies
+        uses: AnimMouse/setup-yt-dlp/cookies@v3
+        with:
+          cookies: ${{ secrets.YOUTUBE_COOKIES }}
+          enable: true
+      
+      - name: Create download directory
+        run: mkdir -p /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download
+      
+      - name: Send Quote
+        run: python send_quote.py
+      
+      - name: Send Weather
+        run: python send_weather.py
+      
+      - name: Send Music Recommendation
+        run: python send_music.py
+      
+      - name: Update yt-dlp YouTube cookies
+        uses: AnimMouse/setup-yt-dlp/cookies/update@v3
+        with:
+          cookies_secret_name: YOUTUBE_COOKIES
+          token: ${{ secrets.GH_PAT }}
