@@ -7,9 +7,6 @@ import os
 import logging
 from dotenv import load_dotenv
 from config import DEBUG_MODE, ENABLE_TELEGRAM
-import subprocess
-import shutil
-import tempfile
 
 load_dotenv()
 
@@ -83,7 +80,7 @@ def send_audio_with_caption(audio_path, caption):
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
     Send a music recommendation to Telegram with available metadata.
-    Downloads the MP3 from Spotify using spotDL, embeds metadata and cover, and sends the MP3 file.
+    Downloads the MP3 from YouTube, embeds metadata and cover, and sends the MP3 file.
     Args:
         track_name (str): Name of the track.
         artist_name (str): Name of the artist.
@@ -106,115 +103,42 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     message += f"\U0001F464 {artist_name}\n"
     if album_name:
         message += f"\U0001F4BF {album_name}\n"
-    # Download using spotDL
-    temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
-    if not os.path.exists(temp_dir):
-        os.makedirs(temp_dir)
-    spotify_url = None
-    if track_name and artist_name:
-        # Try to get the Spotify track URL using the Spotify API
+    mp3_path = search_and_download_youtube_mp3(track_name, artist_name, album_name)
+    if mp3_path and os.path.exists(mp3_path):
         try:
-            import requests
-            from dotenv import load_dotenv
-            load_dotenv()
-            SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
-            SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
-            auth_url = "https://accounts.spotify.com/api/token"
-            auth_response = requests.post(auth_url, {
-                'grant_type': 'client_credentials',
-                'client_id': SPOTIFY_CLIENT_ID,
-                'client_secret': SPOTIFY_CLIENT_SECRET,
-            })
-            auth_response.raise_for_status()
-            access_token = auth_response.json()['access_token']
-            headers = {'Authorization': f'Bearer {access_token}'}
-            query = f"track:{track_name} artist:{artist_name}"
-            params = {'q': query, 'type': 'track', 'limit': 1}
-            search_url = "https://api.spotify.com/v1/search"
-            resp = requests.get(search_url, headers=headers, params=params)
-            resp.raise_for_status()
-            items = resp.json().get('tracks', {}).get('items', [])
-            if items:
-                spotify_url = items[0]['external_urls']['spotify']
+            audio = MP3(mp3_path, ID3=ID3)
+            try:
+                audio.add_tags()
+            except Exception:
+                pass
+            audio.tags.add(TIT2(encoding=3, text=track_name))
+            audio.tags.add(TPE1(encoding=3, text=artist_name))
+            if album_name:
+                audio.tags.add(TALB(encoding=3, text=album_name))
+            if album_image:
+                img_data = requests.get(album_image).content
+                audio.tags.add(APIC(
+                    encoding=3,
+                    mime='image/jpeg',
+                    type=3,
+                    desc='Cover',
+                    data=img_data
+                ))
+            audio.save()
+            url = f'https://api.telegram.org/bot{token}/sendAudio'
+            with open(mp3_path, 'rb') as audio_file:
+                files = {'audio': audio_file}
+                data = {'chat_id': chat_id, 'caption': message, 'parse_mode': 'HTML'}
+                logging.debug(f"Sending MP3 to Telegram chat {chat_id}")
+                response = requests.post(url, files=files, data=data)
+                response.raise_for_status()
+                logging.debug("MP3 sent successfully")
+                os.remove(mp3_path)
+                return response.json()
         except Exception as e:
-            logging.error(f"Failed to get Spotify track URL: {e}")
-    if not spotify_url:
-        logging.error("Could not determine Spotify track URL for spotDL download.")
-        return None
-    # Download the track using spotDL CLI
-    command = [
-        "spotdl", "download", spotify_url,
-        "--output", temp_dir,
-        "--bitrate", "320k"
-    ]
-    logging.info(f"Executing spotDL command: {' '.join(command)}")
-    
-    try:
-        result = subprocess.run(
-            command,
-            capture_output=True, text=True, check=False
-        )
-        logging.info(f"spotDL stdout:\n{result.stdout}")
-        logging.error(f"spotDL stderr:\n{result.stderr}")
-        
-        if result.returncode != 0:
-            logging.error(f"spotDL failed with return code {result.returncode}")
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            return None
-    except Exception as e:
-        logging.error(f"Unexpected error during spotDL execution: {e}")
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        return None
-    # Find the downloaded MP3 file
-    mp3_path = None
-    for fname in os.listdir(temp_dir):
-        if fname.lower().endswith(".mp3"):
-            mp3_path = os.path.join(temp_dir, fname)
-            break
-    if not mp3_path:
-        logging.error("No MP3 file found after spotDL download.")
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        return None
-    # Optionally verify and update metadata using Spotify API (already embedded by spotDL, but double-check)
-    try:
-        audio = MP3(mp3_path, ID3=ID3)
-        try:
-            audio.add_tags()
-        except Exception:
-            pass
-        audio.tags.add(TIT2(encoding=3, text=track_name))
-        audio.tags.add(TPE1(encoding=3, text=artist_name))
-        if album_name:
-            audio.tags.add(TALB(encoding=3, text=album_name))
-        if album_image:
-            img_data = requests.get(album_image).content
-            audio.tags.add(APIC(
-                encoding=3,
-                mime='image/jpeg',
-                type=3,
-                desc='Cover',
-                data=img_data
-            ))
-        audio.save()
-    except Exception as e:
-        logging.warning(f"Could not update MP3 metadata: {e}")
-    # Send the MP3 file to Telegram
-    try:
-        url = f'https://api.telegram.org/bot{token}/sendAudio'
-        with open(mp3_path, 'rb') as audio_file:
-            files = {'audio': audio_file}
-            data = {'chat_id': chat_id, 'caption': message, 'parse_mode': 'HTML'}
-            logging.debug(f"Sending MP3 to Telegram chat {chat_id}")
-            response = requests.post(url, files=files, data=data)
-            response.raise_for_status()
-            logging.debug("MP3 sent successfully")
-            result = response.json()
-    except Exception as e:
-        logging.error(f"Error sending MP3: {e}")
-        result = None
-    # Clean up temp directory
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    return result
+            logging.error(f"Error sending MP3: {e}")
+            if os.path.exists(mp3_path):
+                os.remove(mp3_path)
     if preview_url:
         try:
             logging.debug(f"Downloading preview from {preview_url}")
