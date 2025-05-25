@@ -41,7 +41,7 @@ jobs:
 
       - name: Download YouTube content
         run: |
-          yt-dlp --cookies-from-browser chrome --cookies ${{ secrets.YOUTUBE_COOKIES }} --output "/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/%(title)s.%(ext)s" "<URL>"
+          yt-dlp --default-search "ytsearch" --cookies ${{ secrets.YOUTUBE_COOKIES }} --output "/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/%(title)s.%(ext)s" "<URL>"
           if [ $? -ne 0 ]; then
             echo "Cookies expired, updating..."
             base64 < ~/.cache/yt-dlp/youtube/cookies.txt | gh secret set "${{ secrets.YOUTUBE_COOKIES }}"
