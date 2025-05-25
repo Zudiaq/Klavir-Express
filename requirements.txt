@@ -3,3 +3,4 @@ mutagen
 python-dotenv
 requests
 logging
+translate
