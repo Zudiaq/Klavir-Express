@@ -37,7 +37,7 @@ def update_cookies(cookies_secret_name, github_token, repo):
     except Exception as e:
         logging.warning(f"Cookies expired: {e}")
         # Refresh cookies
-        new_cookies_path = os.path.join(os.getenv('USERPROFILE'), '.cache', 'yt-dlp', 'youtube', 'new_cookies.txt')
+        new_cookies_path = os.path.join(os.getenv('USERPROFILE'), 'cookies.txt')
         with YoutubeDL({'cookies_from_browser': 'chrome', 'cookiefile': new_cookies_path}) as ydl:
             ydl.extract_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False)
         if os.path.exists(new_cookies_path) and os.path.getsize(new_cookies_path) > 0:
