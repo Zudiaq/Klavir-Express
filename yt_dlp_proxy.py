@@ -37,7 +37,7 @@ def test_proxy(proxy):
         requests.get(
             "http://www.google.com",
             proxies={"http": f"http://{proxy_str}"},
-            timeout=3,
+            timeout=60,
         ).raise_for_status()
         
         # Second test: Download speed test with stricter timeout
@@ -127,8 +127,7 @@ def test_proxy_with_yt_dlp(proxy):
             ["yt-dlp", "--proxy", f"http://{proxy_str}", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
             capture_output=True,
             text=True,
-            timeout1=60,
-            timeout=timeout1
+            timeout=timeout
         )
         # Check for errors in the output
         if "sign in" in result.stderr.lower() or "cookie" in result.stderr.lower():
