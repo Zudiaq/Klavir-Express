@@ -14,7 +14,11 @@ def update_cookies(cookies_secret_name, github_token, repo):
     """
     logging.info("Starting cookie update...")
     # Decode cookies
-    cookies_path = os.path.join(os.getenv('USERPROFILE'), '.cache', 'yt-dlp', 'youtube', 'cookies.txt')
+    home_dir = os.getenv('HOME') or os.getenv('USERPROFILE')
+    if not home_dir:
+        logging.error("HOME or USERPROFILE environment variable is not set.")
+        return
+    cookies_path = os.path.join(home_dir, '.cache', 'yt-dlp', 'youtube', 'cookies.txt')
     with open(cookies_path, 'rb') as f:
         cookies_data = f.read()
     cookies_encoded = base64.b64encode(cookies_data).decode()
@@ -49,4 +53,4 @@ def update_cookies(cookies_secret_name, github_token, repo):
     logging.info("Cookies secret updated.")
 
 if __name__ == "__main__":
-    update_cookies(os.getenv("YOUTUBE_COOKIES"), os.getenv("GH_PAT"), os.getenv("GITHUB_REPOSITORY", ""))
+    update_cookies(os.getenv("YOUTUBE_COOKIES"), os.getenv("GH_PAT"), "https://github.com/Zudiaq/")
