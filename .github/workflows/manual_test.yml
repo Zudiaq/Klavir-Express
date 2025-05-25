@@ -33,13 +33,13 @@ jobs:
       - name: Setup proxy providers
         run: |
           # Create necessary directories if they don't exist
-          mkdir -p yt-dlp-proxy/proxy_providers
+          mkdir -p proxy_providers
           # Copy proxy provider files to ensure they're available
           # Copy proxy provider files only if they don't already exist
-          find yt-dlp-proxy/proxy_providers -type f -exec cp -n {} yt-dlp-proxy/proxy_providers/ \;
+          find proxy_providers -type f -exec cp -n {} proxy_providers/ \;
           # Ensure proxy.json exists (will be created if not)
           touch proxy.json
-      - name: Run send_music.py
+      - name: Ensure proxy providers directory exists
         run: |
-          mkdir -p yt-dlp-proxy/proxy_providers
+          mkdir -p yt_dlp_proxy/proxy_providers
           python send_music.py
