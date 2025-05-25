@@ -152,7 +152,7 @@ def update_proxies():
         # Import proxy providers dynamically
         from proxy_provider import ProxyProvider
         providers = []
-        proxy_providers_dir = os.path.join(os.path.dirname(__file__), "yt_dlp_proxy", "proxy_providers")
+        proxy_providers_dir = os.path.join(os.path.dirname(__file__), "proxy_providers")
         
         if not os.path.exists(proxy_providers_dir):
             logging.error(f"Proxy providers directory not found: {proxy_providers_dir}")
@@ -162,7 +162,7 @@ def update_proxies():
             # Check if the file is a Python module
             if filename.endswith(".py") and filename != "__init__.py":
                 module_name = filename[:-3]  # Remove the '.py' suffix
-                module_path = f'yt_dlp_proxy.proxy_providers.{module_name}'
+                module_path = f'proxy_providers.{module_name}'
                 try:
                     module = importlib.import_module(module_path)
                     classes = inspect.getmembers(module, inspect.isclass)
