@@ -150,7 +150,7 @@ def update_proxies():
     """Update the proxies list and save the best ones."""
     try:
         # Import proxy providers dynamically
-        from proxy_provider import ProxyProvider
+        from yt-dlp-proxy.proxy_provider import ProxyProvider
         providers = []
         proxy_providers_dir = os.path.join(os.path.dirname(__file__), "yt-dlp-proxy", "proxy_providers")
         
