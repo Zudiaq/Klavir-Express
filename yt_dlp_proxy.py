@@ -45,7 +45,7 @@ def test_proxy(proxy):
             SPEEDTEST_URL,
             stream=True,
             proxies={"http": f"http://{proxy_str}"},
-            timeout=4,  # Reduced timeout for faster testing
+            timeout=timeout,  # Reduced timeout for faster testing
         )
         response.raise_for_status()  # Ensure we raise an error for bad responses
 
@@ -127,7 +127,8 @@ def test_proxy_with_yt_dlp(proxy):
             ["yt-dlp", "--proxy", f"http://{proxy_str}", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout1=60,
+            timeout=timeout1
         )
         # Check for errors in the output
         if "sign in" in result.stderr.lower() or "cookie" in result.stderr.lower():
@@ -148,7 +149,7 @@ def attempt_download_with_proxy(proxy):
             ["yt-dlp", "--proxy", f"http://{proxy_str}", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=timeout
         )
         if result.returncode == 0:
             logging.info("Download successful with proxy")
