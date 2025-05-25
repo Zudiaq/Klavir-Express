@@ -48,6 +48,7 @@ jobs:
           if [ $? -ne 0 ]; then
             echo "Cookies expired, updating..."
             base64 < ~/.cache/yt-dlp/youtube/cookies.txt | gh secret set "YOUTUBE_COOKIES" --repo ${{ github.repository }} --token ${{ secrets.GH_PAT }}
+            exit 1
           fi
 
       - name: Download YouTube content
@@ -56,6 +57,7 @@ jobs:
           if [ $? -ne 0 ]; then
             echo "Cookies expired, updating..."
             base64 < ~/.cache/yt-dlp/youtube/cookies.txt | gh secret set "YOUTUBE_COOKIES" --repo ${{ github.repository }} --token ${{ secrets.GH_PAT }}
+            exit 1
           fi
 
       - name: Update YouTube cookies for Windows
