@@ -28,9 +28,11 @@ def process_music_recommendation():
             song = get_song_by_mood(mood)
         if song:
             track_name, artist_name, album_name, album_image, preview_url = song
-            result = send_to_telegram(
-                track_name, artist_name, album_name, album_image, preview_url, mood
-            )
+            youtube_link = search_and_download_youtube_mp3(track_name, artist_name, album_name)
+            if youtube_link:
+                result = send_to_telegram(
+                    track_name, artist_name, album_name, album_image, youtube_link, mood
+                )
             logging.debug(f"Music recommendation send result: {result}")
         else:
             logging.error("Failed to retrieve song.")
