@@ -1641,4 +1641,8 @@ def update_proxies():
             logging.info(f"Proxy list updated successfully with {len(best_proxies)} proxies")
             return True
         else:
-            logging.error("No
+            logging.error("No valid proxies found")
+            return False
+    except Exception as e:
+        logging.error(f"Failed to update proxies: {e}")
+        return False
