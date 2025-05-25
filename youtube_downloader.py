@@ -23,6 +23,9 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     download_dir = '/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download'
     os.makedirs(download_dir, exist_ok=True)
     
+    # Path to cookies file
+    cookies_file = os.path.join(download_dir, 'cookies.txt')
+    
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -36,6 +39,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         }],
         'extract_flat': False,
         'nocheckcertificate': True,
+        'cookiefile': cookies_file if os.path.exists(cookies_file) else None,
     }
     try:
         with YoutubeDL(ydl_opts) as ydl:
