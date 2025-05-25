@@ -39,6 +39,9 @@ jobs:
       - name: Install yt-dlp
         run: pip install yt-dlp
 
+      - name: Create download directory
+        run: mkdir -p /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download
+
       - name: Download YouTube content
         run: |
           echo ${{ secrets.YOUTUBE_COOKIES }} | base64 --decode > /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt
@@ -51,7 +54,7 @@ jobs:
       - name: Update YouTube cookies for Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: '[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.cache\yt-dlp\youtube\cookies.txt")) | gh secret set "$env:YOUTUBE_COOKIES"'
+        run: '[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.cache\yt-dlp\youtube\cookies.txt")) | gh secret set "YOUTUBE_COOKIES"'
         env:
           cookies_secret_name: ${{ secrets.YOUTUBE_COOKIES }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
