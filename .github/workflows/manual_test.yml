@@ -40,4 +40,6 @@ jobs:
           # Ensure proxy.json exists (will be created if not)
           touch proxy.json
       - name: Run send_music.py
-        run: python send_music.py
+        run: |
+          mkdir -p yt-dlp-proxy/proxy_providers
+          python send_music.py
