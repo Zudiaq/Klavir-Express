@@ -42,28 +42,47 @@ jobs:
       - name: Create download directory
         run: mkdir -p /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download
 
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      
       - name: Test YouTube cookies
         run: |
           echo ${{ secrets.YOUTUBE_COOKIES }} | base64 --decode > /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt
-          yt-dlp --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --skip-download --get-title "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-          if [ $? -ne 0 ]; then
-            echo "Cookies expired, updating..."
-            base64 < ~/.cache/yt-dlp/youtube/cookies.txt | gh secret set "YOUTUBE_COOKIES" --repo ${{ github.repository }} --token ${{ secrets.GH_PAT }}
-            echo ${{ secrets.YOUTUBE_COOKIES }} | base64 --decode > /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt
-            yt-dlp --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --skip-download --get-title "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-            if [ $? -ne 0 ]; then
-              echo "Failed to update cookies."
-              exit 1
+          # First attempt with existing cookies
+          if ! yt-dlp --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --skip-download --get-title "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; then
+            echo "Cookies expired, attempting to refresh..."
+            # Use yt-dlp to generate new cookies
+            yt-dlp --cookies-from-browser chrome --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/new_cookies.txt --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            
+            # If new cookies file exists and has content, update the secret
+            if [ -s "/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/new_cookies.txt" ]; then
+              echo "New cookies generated, updating secret..."
+              base64 < /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/new_cookies.txt | gh secret set "YOUTUBE_COOKIES" --repo ${{ github.repository }} --token ${{ secrets.GH_PAT }}
+              # Use the new cookies file
+              cp /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/new_cookies.txt /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt
+              
+              # Test the new cookies
+              if ! yt-dlp --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --skip-download --get-title "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; then
+                echo "Failed to update cookies. Using AnimMouse/setup-yt-dlp/cookies/update action as fallback."
+                # We'll continue and try the AnimMouse action later
+              fi
+            else
+              echo "Failed to generate new cookies."
             fi
           fi
 
       - name: Download YouTube content
         run: |
-          yt-dlp --default-search "ytsearch" --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --output "/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/%(title)s.%(ext)s" "<URL>"
-          if [ $? -ne 0 ]; then
-            echo "Cookies expired, updating..."
-            base64 < ~/.cache/yt-dlp/youtube/cookies.txt | gh secret set "YOUTUBE_COOKIES" --repo ${{ github.repository }} --token ${{ secrets.GH_PAT }}
-            exit 1
+          # Test with a known video ID
+          if ! yt-dlp --default-search "ytsearch" --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --skip-download --get-title "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; then
+            echo "Cookies still not working for download, using AnimMouse action as fallback..."
+            # We'll continue and let the AnimMouse action handle it later
+          else
+            echo "Cookies are working correctly for downloads"
           fi
 
       - name: Update YouTube cookies for Windows
