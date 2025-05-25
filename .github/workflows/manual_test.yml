@@ -1,10 +1,15 @@
-name: Test Music Sender
+name: Test Script Workflow
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  send_music:
+  test:
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
@@ -20,26 +25,19 @@ jobs:
       SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
       SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Setup proxy providers
-        run: |
-          # Create necessary directories if they don't exist
-          mkdir -p proxy_providers
-          # Copy proxy provider files to ensure they're available
-          # Copy proxy provider files only if they don't already exist
-          find proxy_providers -type f -exec cp -n {} proxy_providers/ \;
-          # Ensure proxy.json exists (will be created if not)
-          touch proxy.json
-      - name: Ensure proxy providers directory exists
-        run: |
-          mkdir -p yt_dlp_proxy/proxy_providers
-          python send_music.py
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run test script
+      run: |
+        python test_script.py
