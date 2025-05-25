@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 from config import DEBUG_MODE, SPOTIFY_PLAYLIST_URL
 import json
-import subprocess
-import shutil
 
 load_dotenv()
 
@@ -310,71 +308,3 @@ def fallback_search(mood, headers):
     except requests.exceptions.RequestException as e:
         logging.error(f"Error in fallback search: {e}")
         return None
-
-def is_ffmpeg_installed():
-    """
-    Check if FFmpeg is installed and accessible from the command line.
-    Returns:
-        bool: True if FFmpeg is installed, False otherwise.
-    """
-    try:
-        result = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, check=True)
-        logging.debug(f"FFmpeg version: {result.stdout.splitlines()[0]}")
-        return True
-    except FileNotFoundError:
-        logging.error("FFmpeg is not installed. Please install FFmpeg to use spotDL.")
-        return False
-    except Exception as e:
-        logging.error(f"Unexpected error while checking FFmpeg installation: {e}")
-        return False
-
-def download_song_spotdl(spotify_url):
-    """
-    Download a song using spotDL
-    
-    Args:
-        spotify_url (str): The Spotify URL of the song to download
-    Returns:
-        str: Path to the downloaded MP3 file, or None if download fails.
-    """
-    if not is_ffmpeg_installed():
-        logging.error("FFmpeg is required for spotDL to function. Aborting download.")
-        return None
-
-    temp_dir = os.getenv("SPOTDL_DOWNLOAD_DIR", "temp_download")
-    os.makedirs(temp_dir, exist_ok=True)
-    
-    command = [
-        "spotdl", "download", spotify_url,
-        "--output", temp_dir,
-        "--bitrate", "320k"
-    ]
-    logging.info(f"Executing spotDL command: {' '.join(command)}")
-    
-    try:
-        result = subprocess.run(
-            command,
-            capture_output=True, text=True, check=False
-        )
-        logging.info(f"spotDL stdout:\n{result.stdout}")
-        logging.error(f"spotDL stderr:\n{result.stderr}")
-        
-        if result.returncode != 0:
-            logging.error(f"spotDL failed with return code {result.returncode}")
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            return None
-    except Exception as e:
-        logging.error(f"Unexpected error during spotDL execution: {e}")
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        return None
-    
-    # Find the downloaded MP3 file
-    for file_name in os.listdir(temp_dir):
-        if file_name.endswith(".mp3"):
-            downloaded_file = os.path.join(temp_dir, file_name)
-            logging.info(f"Downloaded song file: {downloaded_file}")
-            return downloaded_file
-    
-    logging.error("No MP3 file found in the downloaded content")
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    return None
