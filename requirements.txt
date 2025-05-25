@@ -3,5 +3,3 @@ mutagen
 python-dotenv
 requests
 logging
-tqdm
-translate
