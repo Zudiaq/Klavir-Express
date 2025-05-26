@@ -31,8 +31,11 @@ jobs:
           python-version: '3.13'
       - name: Cookies Rev
         run: |
-          base64 -d "$YOUTUBE_COOKIES" > cookies.txt
-          cat cookies.txt
+          echo "Decoding YouTube cookies for verification..."
+          echo $YOUTUBE_COOKIES | base64 -d | head -c 100
+          echo "\n... (truncated for security) ..."
+          echo "Cookie decoding test completed."
+
       
       - name: Install dependencies
         run: |
