@@ -1,8 +1,35 @@
 import os
 import re
 import logging
+import base64
 from yt_dlp import YoutubeDL
-import tempfile
+
+def get_youtube_cookies():
+    """
+    Get YouTube cookies from environment variable and decode from base64
+    Returns:
+        str: Path to cookies file or None if not available
+    """
+    cookies_b64 = os.getenv('YOUTUBE_COOKIES')
+    if not cookies_b64:
+        logging.info("No YouTube cookies found in environment variables")
+        return None
+    
+    try:
+        # Decode base64 cookies
+        cookies_data = base64.b64decode(cookies_b64).decode('utf-8')
+        
+        # Write cookies to temporary file
+        cookies_file = 'youtube_cookies.txt'
+        with open(cookies_file, 'w', encoding='utf-8') as f:
+            f.write(cookies_data)
+        
+        logging.info("YouTube cookies successfully decoded and saved to file")
+        return cookies_file
+    except Exception as e:
+        logging.error(f"Error decoding YouTube cookies: {e}")
+        return None
+
 
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
     """
@@ -18,20 +45,12 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     query = f"{track_name} {artist_name} official audio"
     if album_name:
         query += f" {album_name}"
-    
-    # Create a temporary directory for downloads
-    download_dir = '/home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download'
-    os.makedirs(download_dir, exist_ok=True)
-    
-    # Path to cookies file
-    cookies_file = os.path.join(download_dir, 'cookies.txt')
-    
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
         'quiet': True,
         'default_search': 'ytsearch5',
-        'outtmpl': os.path.join(download_dir, '%(title)s.%(ext)s'),
+        'outtmpl': '%(title)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -39,8 +58,12 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
         }],
         'extract_flat': False,
         'nocheckcertificate': True,
-        'cookiefile': cookies_file if os.path.exists(cookies_file) else None,
     }
+    
+    # Add cookies if available
+    cookies_file = get_youtube_cookies()
+    if cookies_file and os.path.exists(cookies_file):
+        ydl_opts['cookiefile'] = cookies_file
     try:
         with YoutubeDL(ydl_opts) as ydl:
             search_results = ydl.extract_info(query, download=False)['entries']
