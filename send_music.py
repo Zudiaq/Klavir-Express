@@ -5,6 +5,7 @@ from weather import get_weather
 from spotify import get_song_by_mood_spotify
 from lastfm import get_song_by_mood
 from telegram_bot import send_music_recommendation as send_to_telegram
+from youtube_downloader import search_and_download_youtube_mp3
 from config import DEFAULT_MUSIC_API
 
 logging.basicConfig(
@@ -28,11 +29,9 @@ def process_music_recommendation():
             song = get_song_by_mood(mood)
         if song:
             track_name, artist_name, album_name, album_image, preview_url = song
-            youtube_link = search_and_download_youtube_mp3(track_name, artist_name, album_name)
-            if youtube_link:
-                result = send_to_telegram(
-                    track_name, artist_name, album_name, album_image, youtube_link, mood
-                )
+            result = send_to_telegram(
+                track_name, artist_name, album_name, album_image, preview_url, mood
+            )
             logging.debug(f"Music recommendation send result: {result}")
         else:
             logging.error("Failed to retrieve song.")
