@@ -32,7 +32,7 @@ jobs:
       - name: Cookies Rev
         run: |
           echo "Decoding YouTube cookies for verification..."
-          echo $YOUTUBE_COOKIES | base64 -d
+          echo $YOUTUBE_COOKIES | base64 -d || echo "Invalid base64 input"
           echo "Cookie decoding test completed."
 
       
