@@ -1,19 +1,17 @@
-name: Klavir Workflow
+name: Daily Telegram Bot
 
 on:
-  workflow_dispatch:  
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  run-klavir:
-    name: Run Klavir Application
+  run-bot:
     runs-on: ubuntu-latest
-    environment: Deployment 1
+    name: Deployment 1
     
     env:
       CITY: ${{ vars.CITY }}
       REGION: ${{ vars.REGION }}
       API_SELECTION: ${{ vars.API_SELECTION }}
-      SPOTDL_DOWNLOAD_DIR: /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
@@ -22,6 +20,7 @@ jobs:
       SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
       SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
       YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -29,62 +28,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.13'
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          # Install FFmpeg for audio processing
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       
-      - name: Install yt-dlp
-        run: pip install yt-dlp
-
-      - name: Create download directory
-        run: mkdir -p /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download
-
-      - name: Install GitHub CLI
+      - name: Run Klavir Bot
         run: |
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh -y
-      
-      - name: Update YouTube cookies
-        run: python update_cookies.py
-
-      - name: Download YouTube content
-        run: |
-          # Test with a known video ID
-          if ! yt-dlp --default-search "ytsearch" --cookies /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download/cookies.txt --skip-download --get-title "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; then
-            echo "Cookies still not working for download, using AnimMouse action as fallback..."
-            # We'll continue and let the AnimMouse action handle it later
-          else
-            echo "Cookies are working correctly for downloads"
-          fi
-
-      - name: Update YouTube cookies for Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: '[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.cache\yt-dlp\youtube\cookies.txt")) | gh secret set "YOUTUBE_COOKIES"'
-        env:
-          cookies_secret_name: ${{ secrets.YOUTUBE_COOKIES }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          GH_REPO: ${{ github.repository }}
-      
-      - name: Create download directory
-        run: mkdir -p /home/runner/work/klavir-alpha/klavir-alpha/temp/spotdl_download
-      
-      - name: Send Quote
-        run: python send_quote.py
-      
-      - name: Send Weather
-        run: python send_weather.py
-      
-      - name: Send Music Recommendation
-        run: python send_music.py
-      
-      - name: Update yt-dlp YouTube cookies
-        uses: AnimMouse/setup-yt-dlp/cookies/update@v3
-        with:
-          cookies_secret_name: YOUTUBE_COOKIES
-          token: ${{ secrets.GH_PAT }}
+          python test_script.py
