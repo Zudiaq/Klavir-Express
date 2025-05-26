@@ -6,8 +6,7 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    name: Deployment 1
-    
+    environment: Deployment 1
     env:
       CITY: ${{ vars.CITY }}
       REGION: ${{ vars.REGION }}
