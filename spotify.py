@@ -4,6 +4,7 @@ import logging
 import yaml
 import json
 import http.client
+import base64
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 from config import DEBUG_MODE, SPOTIFY_PLAYLIST_URL
@@ -49,15 +50,16 @@ def update_yaml_file(content):
     headers = {"Authorization": f"token {GH_PAT}"}
     try:
         # Fetch the current file to get the SHA
-        response = requests.get(url, headers=headers, timeout=10)  # Add timeout
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         sha = response.json()["sha"]
 
         # Prepare the updated content
         updated_content = yaml.dump(content, default_flow_style=False)
+        encoded_content = base64.b64encode(updated_content.encode("utf-8")).decode("utf-8")  # اصلاح Base64
         payload = {
             "message": "Update API key usage",
-            "content": updated_content.encode("utf-8").decode("base64"),
+            "content": encoded_content,
             "sha": sha
         }
         response = requests.put(url, headers=headers, json=payload)
