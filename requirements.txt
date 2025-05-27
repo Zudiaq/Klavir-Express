@@ -1,6 +1,4 @@
-yt-dlp
 mutagen
 python-dotenv
 requests
-logging
 translate
