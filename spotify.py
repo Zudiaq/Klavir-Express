@@ -1,23 +1,132 @@
 import requests
 import os
 import logging
+import yaml
+import json
+import http.client
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 from config import DEBUG_MODE, SPOTIFY_PLAYLIST_URL
-import json
+from telegram_bot import send_audio_with_caption
 
 load_dotenv()
 
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_API_URL = "https://api.spotify.com/v1/"
+GH_PAT = os.getenv('GH_PAT')
+YAML_REPO = "Zudiaq/youtube-mp3-apis"
+YAML_FILE_PATH = "youtube-mp3-api-stats.yaml"
 
-# Set up logging
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+def fetch_yaml_file():
+    """
+    Fetch the YAML file from the private GitHub repository.
+    Returns:
+        dict: Parsed YAML content.
+    """
+    url = f"https://raw.githubusercontent.com/{YAML_REPO}/main/{YAML_FILE_PATH}"
+    headers = {"Authorization": f"token {GH_PAT}"}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)  # Add timeout for reliability
+        response.raise_for_status()
+        return yaml.safe_load(response.text)
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to fetch YAML file: {e}")
+        return None
+
+def update_yaml_file(content):
+    """
+    Update the YAML file in the private GitHub repository.
+    Args:
+        content (dict): Updated YAML content.
+    """
+    url = f"https://api.github.com/repos/{YAML_REPO}/contents/{YAML_FILE_PATH}"
+    headers = {"Authorization": f"token {GH_PAT}"}
+    try:
+        # Fetch the current file to get the SHA
+        response = requests.get(url, headers=headers, timeout=10)  # Add timeout
+        response.raise_for_status()
+        sha = response.json()["sha"]
+
+        # Prepare the updated content
+        updated_content = yaml.dump(content, default_flow_style=False)
+        payload = {
+            "message": "Update API key usage",
+            "content": updated_content.encode("utf-8").decode("base64"),
+            "sha": sha
+        }
+        response = requests.put(url, headers=headers, json=payload)
+        response.raise_for_status()
+        logging.info("YAML file updated successfully.")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to update YAML file: {e}")
+
+def get_api_key():
+    """
+    Select a usable API key from the YAML file.
+    Returns:
+        str: API key.
+    """
+    yaml_content = fetch_yaml_file()
+    if not yaml_content:
+        return None
+
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    for key_entry in yaml_content["keys"]:
+        if key_entry["usage"] < 300:
+            # Reset logic optimization
+            if key_entry["reset_day"] == datetime.now().day and key_entry["last_reset"] != today:
+                key_entry.update({"usage": 0, "last_reset": today})
+            key_entry["usage"] += 1
+            update_yaml_file(yaml_content)
+            return key_entry["key"]
+    logging.error("No usable API key found.")
+    return None
+
+def download_mp3_from_youtube(video_id):
+    """
+    Use the RapidAPI to download the MP3 file for the given YouTube video ID.
+    Args:
+        video_id (str): YouTube video ID.
+    Returns:
+        str: Path to the downloaded MP3 file.
+    """
+    api_key = get_api_key()
+    if not api_key:
+        return None
+
+    conn = http.client.HTTPSConnection("youtube-mp36.p.rapidapi.com")
+    headers = {
+        'x-rapidapi-key': api_key,
+        'x-rapidapi-host': "youtube-mp36.p.rapidapi.com"
+    }
+    try:
+        conn.request("GET", f"/dl?id={video_id}", headers=headers)
+        res = conn.getresponse()
+        data = res.read()
+        response = json.loads(data.decode("utf-8"))
+
+        if response.get("status") == "ok":
+            mp3_link = response.get("link")
+            mp3_path = "downloaded_song.mp3"
+            with requests.get(mp3_link, stream=True) as r:
+                r.raise_for_status()
+                with open(mp3_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+            return mp3_path
+        else:
+            logging.error(f"Failed to download MP3: {response}")
+            return None
+    except http.client.HTTPException as e:
+        logging.error(f"HTTP error during MP3 download: {e}")
+        return None
 
 def get_spotify_token():
     """
@@ -36,14 +145,12 @@ def get_spotify_token():
             'grant_type': 'client_credentials',
             'client_id': SPOTIFY_CLIENT_ID,
             'client_secret': SPOTIFY_CLIENT_SECRET,
-        })
+        }, timeout=10)  # Add timeout
         auth_response.raise_for_status()
-        auth_response_data = auth_response.json()
-        return auth_response_data['access_token']
+        return auth_response.json().get('access_token')
     except requests.exceptions.RequestException as e:
         logging.error(f"Error getting Spotify token: {e}")
         return None
-
 
 SENT_SONGS_FILE = "sent_songs.json"
 
@@ -79,232 +186,52 @@ def save_sent_song(track_name, artist_name, album_name):
 
 def get_song_by_mood_spotify(mood):
     """
-    Get song recommendations based on mood using Spotify's recommendation API or a specific playlist if configured
+    Get song recommendations based on mood using Spotify's recommendation API.
+    Then search for the corresponding YouTube link and download the MP3.
     """
     token = get_spotify_token()
     if not token:
         logging.error("Failed to get Spotify token")
         return None
-    headers = {
-        'Authorization': f'Bearer {token}'
-    }
-    sent_songs = load_sent_songs()
-    max_attempts = 10
-    # If a playlist is specified in config, use it
-    if SPOTIFY_PLAYLIST_URL:
-        # Extract playlist ID from URL or use as is if it's just an ID
-        import re
-        playlist_id = None
-        match = re.search(r'playlist[\/:]?([a-zA-Z0-9]+)', str(SPOTIFY_PLAYLIST_URL))
-        if match:
-            playlist_id = match.group(1)
-        else:
-            # Try to use the value directly
-            playlist_id = str(SPOTIFY_PLAYLIST_URL)
-        playlist_url = f"{SPOTIFY_API_URL}playlists/{playlist_id}/tracks"
-        try:
-            response = requests.get(playlist_url, headers=headers, params={'limit': 100})
-            response.raise_for_status()
-            playlist_data = response.json()
-            if 'items' in playlist_data and playlist_data['items']:
-                # Filter tracks by mood mapping genres if possible
-                mood_params = get_spotify_recommendations_params(mood)
-                mood_genres = set(mood_params.get('seed_genres', '').split(','))
-                valid_tracks = []
-                for item in playlist_data['items']:
-                    track = item.get('track')
-                    if not track:
-                        continue
-                    # Try to match at least one genre if available (Spotify API does not provide genres for tracks directly)
-                    # So we fallback to matching by track name, artist, or just random selection
-                    valid_tracks.append(track)
-                import random
-                attempts = 0
-                while attempts < max_attempts and valid_tracks:
-                    track = random.choice(valid_tracks)
-                    track_name = track.get('name')
-                    artist_name = track['artists'][0]['name'] if track.get('artists') else None
-                    album_name = track['album']['name'] if track.get('album') else None
-                    album_image = track['album']['images'][0]['url'] if track.get('album') and track['album'].get('images') else None
-                    preview_url = track.get('preview_url')
-                    song_key = (track_name, artist_name, album_name)
-                    if song_key not in sent_songs:
-                        save_sent_song(track_name, artist_name, album_name)
-                        return track_name, artist_name, album_name, album_image, preview_url
-                    attempts += 1
-                logging.error("Could not find a unique song from the playlist after several attempts.")
-                return None
-            else:
-                logging.warning("No items found in playlist data.")
-                return None
-        except Exception as e:
-            logging.error(f"Error retrieving tracks from playlist: {e}")
-            return None
-    # Otherwise, use the global Spotify search logic
-    for _ in range(max_attempts):
-        result = direct_search(mood, headers)
-        if not result:
-            return None
-        track_name, artist_name, album_name, album_image, preview_url = result
-        song_key = (track_name, artist_name, album_name)
-        if song_key not in sent_songs:
-            save_sent_song(track_name, artist_name, album_name)
-            return track_name, artist_name, album_name, album_image, preview_url
-        else:
-            logging.info(f"Duplicate song found: {song_key}, retrying...")
-    logging.error("Could not find a unique song after several attempts.")
-    return None
-    
-    # Skip recommendations and go straight to search as it's more reliable
-    logging.info(f"Using direct search for mood: {mood}")
-    return direct_search(mood, headers)
 
-
-def direct_search(mood, headers):
-    """
-    Direct search method using Spotify's search API
-    
-    Args:
-        mood (str): The mood to search for
-        headers (dict): Authorization headers
-        
-    Returns:
-        tuple: (track_name, artist_name, album_name, album_image, preview_url) or None if error
-    """
+    headers = {'Authorization': f'Bearer {token}'}
+    mood_params = get_spotify_recommendations_params(mood)
     search_url = f"{SPOTIFY_API_URL}search"
-    
-    # Try different search strategies in order of preference
-    search_strategies = [
-        # Strategy 1: Search for tracks with the mood in the name
-        {'q': f'genre:{mood}', 'type': 'track', 'limit': 5},
-        # Strategy 2: Search for playlists with the mood and get a track
-        {'q': f'playlist:{mood}', 'type': 'playlist', 'limit': 3},
-        # Strategy 3: General search with the mood
-        {'q': mood, 'type': 'track', 'limit': 10}
-    ]
-    
-    for strategy in search_strategies:
-        try:
-            logging.debug(f"Trying search strategy with params: {strategy}")
-            response = requests.get(search_url, headers=headers, params=strategy)
-            response.raise_for_status()
-            response_data = response.json()
-            
-            # Handle track search results
-            if 'tracks' in response_data and response_data['tracks']['items']:
-                # Get a random track from the results for variety
-                import random
-                tracks = response_data['tracks']['items']
-                track = random.choice(tracks)
-                
-                track_name = track['name']
-                artist_name = track['artists'][0]['name']
-                album_name = track['album']['name']
-                album_image = track['album']['images'][0]['url'] if track['album']['images'] else None
-                preview_url = track['preview_url']
-                
-                logging.info(f"Found track via search: {track_name} by {artist_name}")
-                return track_name, artist_name, album_name, album_image, preview_url
-                
-            # Handle playlist search results by getting a track from a playlist
-            elif 'playlists' in response_data and response_data['playlists']['items']:
-                # Find the first valid playlist with an 'id'
-                playlist = next((pl for pl in response_data['playlists']['items'] if pl and 'id' in pl), None)
-                if playlist and 'id' in playlist:
-                    playlist_id = playlist['id']
-                    # Get tracks from the playlist
-                    playlist_url = f"{SPOTIFY_API_URL}playlists/{playlist_id}/tracks"
-                    try:
-                        playlist_response = requests.get(playlist_url, headers=headers, params={'limit': 10})
-                        playlist_response.raise_for_status()
-                        playlist_data = playlist_response.json()
-                        if 'items' in playlist_data and playlist_data['items']:
-                            # Get a random track from the playlist
-                            import random
-                            valid_tracks = [item['track'] for item in playlist_data['items'] if item and 'track' in item and item['track']]
-                            if valid_tracks:
-                                playlist_track = random.choice(valid_tracks)
-                                track_name = playlist_track.get('name')
-                                artist_name = playlist_track['artists'][0]['name'] if playlist_track.get('artists') else None
-                                album_name = playlist_track['album']['name'] if playlist_track.get('album') else None
-                                album_image = playlist_track['album']['images'][0]['url'] if playlist_track.get('album') and playlist_track['album'].get('images') else None
-                                preview_url = playlist_track.get('preview_url')
-                                logging.info(f"Found track from playlist: {track_name} by {artist_name}")
-                                return track_name, artist_name, album_name, album_image, preview_url
-                            else:
-                                logging.warning("No valid tracks found in playlist.")
-                        else:
-                            logging.warning("No items found in playlist data.")
-                    except Exception as e:
-                        logging.warning(f"Error retrieving tracks from playlist: {e}")
-                else:
-                    logging.warning("No valid playlist with 'id' found in playlists response.")
-        
-        except requests.exceptions.RequestException as e:
-            logging.warning(f"Search strategy failed: {e}")
-            continue
-    
-    # If all strategies fail, try a very generic search
-    try:
-        logging.debug("Trying fallback generic search")
-        fallback_params = {'q': 'popular', 'type': 'track', 'limit': 1}
-        response = requests.get(search_url, headers=headers, params=fallback_params)
-        response.raise_for_status()
-        response_data = response.json()
-        
-        if 'tracks' in response_data and response_data['tracks']['items']:
-            track = response_data['tracks']['items'][0]
-            track_name = track['name']
-            artist_name = track['artists'][0]['name']
-            album_name = track['album']['name']
-            album_image = track['album']['images'][0]['url'] if track['album']['images'] else None
-            preview_url = track['preview_url']
-            
-            logging.info(f"Found track via fallback search: {track_name} by {artist_name}")
-            return track_name, artist_name, album_name, album_image, preview_url
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Final fallback search failed: {e}")
-    
-    logging.error("All search strategies failed")
-    return None
+    params = {'q': mood_params["seed_genres"], 'type': 'track', 'limit': 1}
 
-def fallback_search(mood, headers):
-    """
-    Fallback method using search when recommendations fail
-    
-    Args:
-        mood (str): The mood to search for
-        headers (dict): Authorization headers
-        
-    Returns:
-        tuple: (track_name, artist_name, None, None, None) or None if error
-    """
-    search_url = f"{SPOTIFY_API_URL}search"
-    params = {
-        'q': mood,
-        'type': 'track',
-        'limit': 1
-    }
-    
     try:
-        logging.debug(f"Falling back to search for mood: {mood}")
-        response = requests.get(search_url, headers=headers, params=params)
+        response = requests.get(search_url, headers=headers, params=params, timeout=10)
         response.raise_for_status()
-        response_data = response.json()
-        
-        if response_data['tracks']['items']:
-            track = response_data['tracks']['items'][0]
-            track_name = track['name']
-            artist_name = track['artists'][0]['name']
-            album_name = track['album']['name']
-            album_image = track['album']['images'][0]['url'] if track['album']['images'] else None
-            preview_url = track['preview_url']
-            
-            logging.info(f"Found track via search: {track_name} by {artist_name}")
-            return track_name, artist_name, album_name, album_image, preview_url
+        track = response.json()["tracks"]["items"][0]
+        track_name = track["name"]
+        artist_name = track["artists"][0]["name"]
+        album_name = track["album"]["name"]
+        album_image = track["album"]["images"][0]["url"]
+
+        # Search YouTube for the song
+        youtube_query = f"{track_name} {artist_name} official audio"
+        youtube_search_url = f"https://www.googleapis.com/youtube/v3/search"
+        youtube_params = {
+            "part": "snippet",
+            "q": youtube_query,
+            "key": os.getenv("YOUTUBE_API_KEY"),
+            "maxResults": 1
+        }
+        youtube_response = requests.get(youtube_search_url, params=youtube_params, timeout=10)
+        youtube_response.raise_for_status()
+        video_id = youtube_response.json()["items"][0]["id"]["videoId"]
+
+        # Download MP3 from YouTube
+        mp3_path = download_mp3_from_youtube(video_id)
+        if mp3_path:
+            metadata = {
+                "track_name": track_name,
+                "artist_name": artist_name,
+                "album_name": album_name,
+                "album_image": album_image
+            }
+            send_audio_with_caption(mp3_path, f"🎵 {track_name} by {artist_name}", metadata)
         else:
-            logging.error("No tracks found for the given mood via search")
-            return None
+            logging.error("Failed to download MP3.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error in fallback search: {e}")
-        return None
+        logging.error(f"Error in Spotify to YouTube workflow: {e}")
