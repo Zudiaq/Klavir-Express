@@ -5,8 +5,6 @@ from weather import get_weather
 from spotify import get_song_by_mood_spotify
 from lastfm import get_song_by_mood
 from telegram_bot import send_music_recommendation as send_to_telegram
-from youtube_downloader import search_and_download_youtube_mp3
-from config import DEFAULT_MUSIC_API
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +20,7 @@ def process_music_recommendation():
     weather = get_weather()
     if weather:
         mood = map_weather_to_mood(weather)
-        music_api = os.getenv('API_SELECTION', DEFAULT_MUSIC_API)
+        music_api = os.getenv('API_SELECTION', 'spotify')
         if music_api.lower() == 'spotify':
             song = get_song_by_mood_spotify(mood)
         else:
