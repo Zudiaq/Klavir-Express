@@ -18,7 +18,7 @@ SPOTIFY_PLAYLIST_URL = "https://open.spotify.com/playlist/5cqqGsaya5ito8lAtWE9Ar
 ENABLE_TELEGRAM = True
 
 # Application settings
-DEBUG_MODE = True
+DEBUG_MODE = False
 LOG_LEVEL = "INFO"
 
 # Time settings
