@@ -1,7 +1,7 @@
 import requests
 import os
 import logging
-from mutagen.mp3 import MP3, ID3, APIC, TIT2, TPE1, TALB
+from mutagen.mp3 import MP3, id3, APIC, TIT2, TPE1, TALB  # Corrected import for id3
 from config import DEBUG_MODE, ENABLE_TELEGRAM
 
 logging.basicConfig(
@@ -31,7 +31,7 @@ def send_audio_with_caption(audio_path, caption, metadata=None):
     # Embed metadata into MP3 file
     if metadata:
         try:
-            audio = MP3(audio_path, ID3=ID3)
+            audio = MP3(audio_path, ID3=id3.ID3)  # Corrected ID3 initialization
             try:
                 audio.add_tags()
             except Exception:
