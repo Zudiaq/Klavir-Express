@@ -76,7 +76,6 @@ jobs:
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
       LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
       OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
-      YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
       GH_PAT: ${{ secrets.GH_PAT }}
 
     steps:
