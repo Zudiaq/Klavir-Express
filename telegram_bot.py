@@ -10,6 +10,34 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+def send_message(message):
+    """
+    Send a text message to the configured Telegram chat.
+    Args:
+        message (str): The message text to send.
+    Returns:
+        dict: Telegram API response or None if error.
+    """
+    if not ENABLE_TELEGRAM:
+        logging.info("Telegram messaging is disabled in config")
+        return None
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    if not token or not chat_id:
+        logging.error("Telegram credentials are not set in environment variables")
+        return None
+    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    payload = {'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'}
+    try:
+        logging.debug(f"Sending message to Telegram chat {chat_id}")
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        logging.debug("Message sent successfully")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error sending message: {e}")
+        return None
+
 def send_audio_with_caption(audio_path, caption, metadata=None):
     """
     Send an audio file with caption to Telegram, embedding metadata if provided.
@@ -71,4 +99,49 @@ def send_audio_with_caption(audio_path, caption, metadata=None):
         return None
     except requests.exceptions.RequestException as e:
         logging.error(f"Error sending audio: {e}")
+        return None
+
+def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
+    """
+    Send a music recommendation to Telegram with available metadata.
+    Downloads the MP3 from YouTube, embeds metadata and cover, and sends the MP3 file.
+    Args:
+        track_name (str): Name of the track.
+        artist_name (str): Name of the artist.
+        album_name (str, optional): Name of the album.
+        album_image (str, optional): URL of the album cover image.
+        preview_url (str, optional): URL of the track preview.
+        mood (str, optional): Mood associated with the recommendation.
+    Returns:
+        dict: Telegram API response or None if error.
+    """
+    if not ENABLE_TELEGRAM:
+        logging.info("Telegram messaging is disabled in config")
+        return None
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    if not token or not chat_id:
+        logging.error("Telegram credentials are not set in environment variables")
+        return None
+    message = f"\U0001F3B5 <b>{track_name}</b>\n"
+    message += f"\U0001F464 {artist_name}\n"
+    if album_name:
+        message += f"\U0001F4BF {album_name}\n"
+    if mood:
+        message += f"\U0001F4AC Mood: {mood}\n"
+    url = f'https://api.telegram.org/bot{token}/sendAudio'
+    try:
+        with open("downloaded_song.mp3", 'rb') as audio_file:
+            files = {'audio': audio_file}
+            data = {'chat_id': chat_id, 'caption': message, 'parse_mode': 'HTML'}
+            logging.debug(f"Sending MP3 to Telegram chat {chat_id}")
+            response = requests.post(url, files=files, data=data)
+            response.raise_for_status()
+            logging.debug("MP3 sent successfully")
+            return response.json()
+    except FileNotFoundError:
+        logging.error("MP3 file not found.")
+        return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error sending MP3: {e}")
         return None
