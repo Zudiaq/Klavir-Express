@@ -96,7 +96,7 @@ jobs:
 
       - name: Pull YAML file
         run: |
-          git clone https://github.com/Zudiaq/youtube-mp3-apis.git
+          git clone https://$GH_PAT@github.com/Zudiaq/youtube-mp3-apis.git
           cp youtube-mp3-apis/youtube-mp3-api-stats.yaml ./youtube-mp3-api-stats.yaml
 
       - name: Run Music Recommendation
@@ -110,4 +110,4 @@ jobs:
           git config user.email "actions@github.com"
           git add youtube-mp3-api-stats.yaml
           git commit -m "Update API key usage"
-          git push
+          git push https://$GH_PAT@github.com/Zudiaq/youtube-mp3-apis.git
