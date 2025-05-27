@@ -1,4 +1,6 @@
+yt-dlp
 mutagen
 python-dotenv
 requests
 translate
+pyyaml
