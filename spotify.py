@@ -127,8 +127,19 @@ def download_mp3_from_youtube(video_id):
 
             if response.status_code == 200 and data.get("status") == "ok" and data.get("link"):
                 mp3_link = data["link"]
-                mp3_path = "downloaded_song.mp3"
+                cloudflare_worker_url = os.getenv("CLOUDFLARE_WORKER_URL")
+                if cloudflare_worker_url:
+                    logging.info(f"Using Cloudflare Worker to convert MP3 link: {mp3_link}")
+                    try:
+                        worker_response = requests.get(f"{cloudflare_worker_url}?url={mp3_link}", timeout=10)
+                        worker_response.raise_for_status()
+                        mp3_link = worker_response.text.strip()
+                        logging.info(f"Converted MP3 link: {mp3_link}")
+                    except requests.exceptions.RequestException as e:
+                        logging.error(f"Failed to use Cloudflare Worker: {e}")
+                        continue
 
+                mp3_path = "downloaded_song.mp3"
                 logging.info(f"Downloading MP3 from link: {mp3_link}")
                 try:
                     with requests.get(mp3_link, stream=True, timeout=30) as r:
