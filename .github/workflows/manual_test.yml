@@ -100,7 +100,9 @@ jobs:
           cp youtube-mp3-apis/youtube-mp3-api-stats.yaml ./youtube-mp3-api-stats.yaml
 
       - name: Run Music Recommendation
-        run: python send_music.py
+        run: |
+          python send_music.py
+          echo "Music recommendation process completed. Check logs for details."
 
       - name: Push updated YAML
         run: |
