@@ -134,9 +134,9 @@ def download_mp3_from_youtube(video_id):
                         worker_response = requests.get(f"{cloudflare_worker_url}?url={mp3_link}", timeout=10)
                         worker_response.raise_for_status()
                         mp3_link = worker_response.text.strip()
-                        logging.info(f"Converted MP3 link: {mp3_link}")
+                        logging.info(f"Converted MP3 link via Cloudflare Worker: {mp3_link}")
                     except requests.exceptions.RequestException as e:
-                        logging.error(f"Failed to use Cloudflare Worker: {e}")
+                        logging.error(f"Failed to use Cloudflare Worker at {cloudflare_worker_url}: {e}")
                         continue
 
                 mp3_path = "downloaded_song.mp3"
