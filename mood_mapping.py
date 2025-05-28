@@ -185,6 +185,18 @@ MOOD_MAPPING = {
 }
 
 
+VERIFIED_GENRES = [
+    "acoustic", "afrobeat", "alt-rock", "alternative", "ambient", "blues",
+    "chill", "classical", "club", "country", "dance", "deep-house", "disco",
+    "drum-and-bass", "dubstep", "edm", "electro", "electronic", "folk",
+    "funk", "garage", "gospel", "happy", "hard-rock", "hip-hop", "house",
+    "indie", "indie-pop", "jazz", "latin", "metal", "new-age",
+    "opera", "party", "piano", "pop", "r-n-b", "reggae", "reggaeton",
+    "rock", "romance", "sad", "salsa", "sleep", "soul", "study", "summer",
+    "techno", "trance", "trip-hop", "world-music"
+]
+
+
 def get_spotify_recommendations_params(mood):
     """
     Convert a mood string to Spotify recommendation parameters with added diversity.
@@ -202,17 +214,7 @@ def get_spotify_recommendations_params(mood):
     }
     mood_data = MOOD_MAPPING.get(mood.lower(), MOOD_MAPPING.get("neutral"))
     shuffled_genres = random.sample(mood_data["seed_genres"], len(mood_data["seed_genres"]))
-    verified_genres = [
-        "acoustic", "afrobeat", "alt-rock", "alternative", "ambient", "blues",
-        "chill", "classical", "club", "country", "dance", "deep-house", "disco",
-        "drum-and-bass", "dubstep", "edm", "electro", "electronic", "folk",
-        "funk", "garage", "gospel", "happy", "hard-rock", "hip-hop", "house",
-        "indie", "indie-pop", "jazz", "k-pop", "latin", "metal", "new-age",
-        "opera", "party", "piano", "pop", "r-n-b", "reggae", "reggaeton",
-        "rock", "romance", "sad", "salsa", "sleep", "soul", "study", "summer",
-        "techno", "trance", "trip-hop", "world-music"
-    ]
-    valid_genres = [genre for genre in shuffled_genres if genre in verified_genres]
+    valid_genres = [genre for genre in shuffled_genres if genre in VERIFIED_GENRES]
     if not valid_genres:
         logging.warning(f"No valid Spotify genres found for mood '{mood}', using defaults")
         valid_genres = ["pop", "indie", "chill"]
@@ -221,14 +223,10 @@ def get_spotify_recommendations_params(mood):
         "seed_genres": ",".join(valid_genres),
         "limit": 1
     }
-    range_keys = [k for k in mood_data.keys() if k.startswith("target_") and k != "seed_genres"]
-    added = 0
+    range_keys = [k for k in mood_data.keys() if k.startswith("target_")]
     for key in range_keys:
-        if added >= 2:
-            break
         value = mood_data[key]
         if isinstance(value, tuple) and len(value) == 2:
             params[key] = value
-            added += 1
     logging.debug(f"Generated Spotify recommendation parameters: {params}")
     return params
