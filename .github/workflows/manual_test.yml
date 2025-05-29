@@ -21,6 +21,11 @@ jobs:
       OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
 
     steps:
+      - name: link test
+        run: |
+          curl https://apio8dlp.cnvmp3.online/downloads/download.php?file=/The%20Prodigy%20-%20Omen%20(piano%20cover)%200.mp3
+          curl https://cnvmp3.com/v24
+          
       - name: Checkout code
         uses: actions/checkout@v3
 
