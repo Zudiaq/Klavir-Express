@@ -24,7 +24,6 @@ jobs:
       - name: link test
         run: |
           curl -L "https://apio8dlp.cnvmp3.online/downloads/download.php?file=/The%20Prodigy%20-%20Omen%20(piano%20cover)%200.mp3" -o test.mp3
-
           if [ ! -s test.mp3 ]; then
             echo "❌ File is empty or not downloaded"
             exit 1
