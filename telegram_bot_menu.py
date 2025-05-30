@@ -1,13 +1,29 @@
 import yaml
 import os
+import subprocess
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
 
-# Load admin chat ID from GitHub secret
+# Load admin chat ID and GitHub token from secrets
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
+GH_PAT = os.getenv("GH_PAT")
 
-# File to store user data
-USER_DATA_FILE = "user_data.yaml"
+# GitHub repo and file details
+REPO_URL = "https://github.com/zudiaq/your-private-repo.git"
+USER_DATA_FILE = "panel_user_data.yaml"
+
+# Clone or pull the latest repo
+def sync_repo():
+    if not os.path.exists("repo"):
+        subprocess.run(["git", "clone", f"https://{GH_PAT}@{REPO_URL}", "repo"], check=True)
+    else:
+        subprocess.run(["git", "-C", "repo", "pull"], check=True)
+
+# Push changes to the repo
+def push_changes():
+    subprocess.run(["git", "-C", "repo", "add", USER_DATA_FILE], check=True)
+    subprocess.run(["git", "-C", "repo", "commit", "-m", "Update user data"], check=True)
+    subprocess.run(["git", "-C", "repo", "push"], check=True)
 
 # Start command handler
 def start(update: Update, context: CallbackContext):
@@ -19,18 +35,23 @@ def start(update: Update, context: CallbackContext):
         "last_name": user.last_name,
     }
 
-    # Save user data to YAML file
-    if not os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, "w") as file:
+    # Sync repo and load user data
+    sync_repo()
+    file_path = os.path.join("repo", USER_DATA_FILE)
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as file:
             yaml.dump([], file)
 
-    with open(USER_DATA_FILE, "r") as file:
+    with open(file_path, "r") as file:
         data = yaml.safe_load(file) or []
 
     data.append(user_data)
 
-    with open(USER_DATA_FILE, "w") as file:
+    with open(file_path, "w") as file:
         yaml.dump(data, file)
+
+    # Push updated data to repo
+    push_changes()
 
     # Notify admin silently
     context.bot.send_message(
@@ -45,6 +66,7 @@ def admin_menu(update: Update, context: CallbackContext):
 
     keyboard = [
         [InlineKeyboardButton("Send Message to Users", callback_data="send_message")],
+        [InlineKeyboardButton("Refresh User Data", callback_data="refresh_data")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text("Admin Menu:", reply_markup=reply_markup)
@@ -55,7 +77,9 @@ def button(update: Update, context: CallbackContext):
     query.answer()
 
     if query.data == "send_message":
-        with open(USER_DATA_FILE, "r") as file:
+        sync_repo()
+        file_path = os.path.join("repo", USER_DATA_FILE)
+        with open(file_path, "r") as file:
             users = yaml.safe_load(file) or []
 
         for user in users:
@@ -63,6 +87,10 @@ def button(update: Update, context: CallbackContext):
                 context.bot.send_message(chat_id=user["chat_id"], text="Hello!")
             except Exception as e:
                 print(f"Failed to send message to {user['chat_id']}: {e}")
+
+    elif query.data == "refresh_data":
+        sync_repo()
+        query.edit_message_text("User data refreshed successfully!")
 
 # Main function
 def main():
