@@ -169,6 +169,9 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
             warning_message = await update.message.reply_text(warning_text)
             user_warning_messages[user_id] = warning_message.message_id
 
+        # Schedule deletion of the warning message after 30 minutes
+        asyncio.create_task(delete_warning_message(context, user_id, 30 * 60))
+
         # Delete the user's message to enforce the limit
         try:
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
@@ -176,15 +179,16 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
             pass
         return False
 
-    # Check if the warning message should be deleted after the limit reset time
-    if user_id in user_warning_messages and now >= user_limit_reset_times[user_id]:
+    return True
+
+async def delete_warning_message(context: ContextTypes.DEFAULT_TYPE, user_id: int, delay: int):
+    await asyncio.sleep(delay)
+    if user_id in user_warning_messages:
         try:
             await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id])
         except Exception:
             pass
         del user_warning_messages[user_id]
-
-    return True
 
 async def forward_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
