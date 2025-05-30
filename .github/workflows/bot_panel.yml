@@ -1,8 +1,9 @@
-name: Panel
+name: Telegram Bot Restart
 
 on:
+  workflow_dispatch: # Allow manual start
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 */6 * * *" # Restart every 6 hours
 
 jobs:
   restart-bot:
@@ -25,6 +26,4 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
           GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          pkill -f telegram_bot.py || true
-          nohup python c:\Users\Zodiac\Desktop\New folder (2)\telegram_bot.py &
+        run: python c:\Users\Zodiac\Desktop\New folder (2)\telegram_bot.py
