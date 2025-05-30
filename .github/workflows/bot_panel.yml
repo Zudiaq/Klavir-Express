@@ -1,4 +1,4 @@
-name: Restart Telegram Bot
+name: Panel
 
 on:
   schedule:
