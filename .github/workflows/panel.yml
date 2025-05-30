@@ -6,7 +6,12 @@ on:
     - cron: "0 */6 * * *" # Restart every 6 hours
 
 jobs:
-  restart-bot:
+  environmet: Deployment 1
+  env:
+    BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+    ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+    GH_PAT: ${{ secrets.GH_PAT }}
+  panel:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,9 +26,5 @@ jobs:
       - name: Install dependencies
         run: pip install python-telegram-bot pyyaml
 
-      - name: Run bot
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
-          GH_PAT: ${{ secrets.GH_PAT }}
+      - name: Run panel
         run: python panel.py
