@@ -2,7 +2,7 @@ import yaml
 import os
 import subprocess
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import time
 
 # Load admin chat ID and GitHub token from secrets
@@ -27,7 +27,7 @@ def push_changes():
     subprocess.run(["git", "-C", "repo", "push"], check=True)
 
 # Start command handler
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_data = {
         "chat_id": user.id,
@@ -55,13 +55,13 @@ def start(update: Update, context: CallbackContext):
     push_changes()
 
     # Notify admin silently
-    context.bot.send_message(
+    await context.bot.send_message(
         chat_id=ADMIN_CHAT_ID,
         text=f"New user started the bot:\n{yaml.dump(user_data)}",
     )
 
 # Admin menu handler
-def admin_menu(update: Update, context: CallbackContext):
+async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_CHAT_ID:
         return
 
@@ -70,12 +70,12 @@ def admin_menu(update: Update, context: CallbackContext):
         [InlineKeyboardButton("Refresh User Data", callback_data="refresh_data")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text("Admin Menu:", reply_markup=reply_markup)
+    await update.message.reply_text("Admin Menu:", reply_markup=reply_markup)
 
 # Callback query handler
-def button(update: Update, context: CallbackContext):
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     if query.data == "send_message":
         sync_repo()
@@ -85,28 +85,27 @@ def button(update: Update, context: CallbackContext):
 
         for user in users:
             try:
-                context.bot.send_message(chat_id=user["chat_id"], text="Hello!")
+                await context.bot.send_message(chat_id=user["chat_id"], text="Hello!")
             except Exception as e:
                 print(f"Failed to send message to {user['chat_id']}: {e}")
 
     elif query.data == "refresh_data":
         sync_repo()
-        query.edit_message_text("User data refreshed successfully!")
+        await query.edit_message_text("User data refreshed successfully!")
 
 # Main function
 def main():
-    updater = Updater(token=os.getenv("TELEGRAM_BOT_TOKEN"))
-    dispatcher = updater.dispatcher
+    application = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
 
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("admin", admin_menu))
-    dispatcher.add_handler(CallbackQueryHandler(button))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("admin", admin_menu))
+    application.add_handler(CallbackQueryHandler(button))
 
-    updater.start_polling()
+    application.run_polling()
 
     # Keep the bot running for 6 hours
     time.sleep(6 * 60 * 60)
-    updater.stop()
+    application.stop()
 
 if __name__ == "__main__":
     main()
