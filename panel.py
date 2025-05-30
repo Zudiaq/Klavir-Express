@@ -27,6 +27,7 @@ MESSAGE_LIMITS = {  # Message limits per user
     "audio": 10,
     "animation": 5,
 }
+LIMIT_DURATION_MINUTES = 30  # Duration of the limit in minutes
 
 # ==========================
 # Global Variables
@@ -137,7 +138,7 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Reset message counts if the reset time has passed
     if now >= user_limit_reset_times[user_id]:
         user_message_counts[user_id] = defaultdict(int)
-        user_limit_reset_times[user_id] = now + timedelta(minutes=30)
+        user_limit_reset_times[user_id] = now + timedelta(minutes=LIMIT_DURATION_MINUTES)
         # Clear any existing warning messages
         if user_id in user_warning_messages:
             try:
@@ -151,8 +152,8 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Check if the user has exceeded the limit for the given message type
     if user_message_counts[user_id][message_type] > MESSAGE_LIMITS.get(message_type, 0):
-        # Apply the 30-minute restriction
-        user_limit_reset_times[user_id] = now + timedelta(minutes=30)
+        # Apply the restriction
+        user_limit_reset_times[user_id] = now + timedelta(minutes=LIMIT_DURATION_MINUTES)
 
         # Calculate remaining time and round to the nearest 15 minutes
         remaining_time = (user_limit_reset_times[user_id] - now).seconds // 60
@@ -169,8 +170,8 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
             warning_message = await update.message.reply_text(warning_text)
             user_warning_messages[user_id] = warning_message.message_id
 
-        # Schedule deletion of the warning message after 30 minutes
-        asyncio.create_task(delete_warning_message(context, user_id, 30 * 60))
+        # Schedule deletion of the warning message after the limit duration
+        asyncio.create_task(delete_warning_message(context, user_id, LIMIT_DURATION_MINUTES * 60))
 
         # Delete the user's message to enforce the limit
         try:
@@ -228,7 +229,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Check if the message exceeds the limit
     if not await check_message_limit(update, context, message_type):
-        return
+        return  # Do not forward or process the message if the limit is exceeded
 
     # Handle other message scenarios
     if context.user_data.get("awaiting_message"):
