@@ -24,6 +24,7 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           pkill -f telegram_bot.py || true
           nohup python c:\Users\Zodiac\Desktop\New folder (2)\telegram_bot.py &
