@@ -12,7 +12,7 @@ jobs:
 
     environment: Deployment 1
     env:
-      BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
       GH_PAT: ${{ secrets.GH_PAT }}
       
