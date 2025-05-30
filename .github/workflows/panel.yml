@@ -6,14 +6,16 @@ on:
     - cron: "0 */6 * * *" # Restart every 6 hours
 
 jobs:
-  environmet: Deployment 1
-  env:
-    BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-    ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
-    GH_PAT: ${{ secrets.GH_PAT }}
+
   panel:
     runs-on: ubuntu-latest
 
+    environment: Deployment 1
+    env:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+      GH_PAT: ${{ secrets.GH_PAT }}
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
