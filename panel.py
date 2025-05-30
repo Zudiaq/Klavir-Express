@@ -10,7 +10,7 @@ ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 GH_PAT = os.getenv("GH_PAT")
 
 # GitHub repo and file details
-REPO_URL = "https://github.com/zudiaq/your-private-repo.git"
+REPO_URL = "https://github.com/Zudiaq/panel_user_data.git"
 USER_DATA_FILE = "panel_user_data.yaml"
 
 # Clone or pull the latest repo
