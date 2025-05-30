@@ -23,6 +23,7 @@ MESSAGE_LIMITS = {  # Message limits per user
     "photo": 10,
     "sticker": 10,
     "voice": 5,
+    "gif": 5,
     "video_note": 5,
     "audio": 3,
     "animation": 5,
