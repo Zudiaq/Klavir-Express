@@ -5,344 +5,197 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 import asyncio
 import nest_asyncio
+from collections import defaultdict
+from datetime import datetime, timedelta
 
-# Allow nested event loops
+# ==========================
+# Configuration Variables
+# ==========================
 nest_asyncio.apply()
 
 # Load admin chat IDs from secrets (support multiple admins)
-ADMIN_CHAT_IDS = os.getenv("ADMIN_CHAT_ID", "").splitlines()
-GH_PAT = os.getenv("GH_PAT")
+ADMIN_CHAT_IDS = os.getenv("ADMIN_CHAT_ID", "").split(",")  # Split by comma for multiple admin IDs
+GH_PAT = os.getenv("GH_PAT")  # GitHub Personal Access Token
+REPO_URL = "github.com/Zudiaq/panel_user_data.git"  # GitHub repository URL
+USER_DATA_FILE = "panel_user_data.yaml"  # User data file name
+MESSAGE_LIMITS = {  # Message limits per user
+    "text": 40,
+    "photo": 10,
+    "sticker": 10,
+    "voice": 5,
+    "video_note": 5,
+    "audio": 3,
+    "animation": 5,
+}
 
-# GitHub repo and file details
-REPO_URL = "github.com/Zudiaq/panel_user_data.git"  # Fixed URL
-USER_DATA_FILE = "panel_user_data.yaml"
+# ==========================
+# Global Variables
+# ==========================
+user_message_counts = defaultdict(lambda: defaultdict(int))
+user_limit_reset_times = defaultdict(lambda: datetime.now() + timedelta(minutes=30))
+user_warning_messages = {}
+user_languages = defaultdict(lambda: DEFAULT_LANGUAGE)
+cached_users = []  # Cache for user list
 
-# Clone or pull the latest repo
+# ==========================
+# Helper Functions
+# ==========================
 def sync_repo():
     if not os.path.exists("repo"):
         subprocess.run(["git", "clone", f"https://{GH_PAT}@{REPO_URL}", "repo"], check=True)
     else:
         subprocess.run(["git", "-C", "repo", "pull"], check=True)
 
-# Push changes to the repo
 def push_changes():
-    # Set Git user configuration
     subprocess.run(["git", "-C", "repo", "config", "user.email", "you@example.com"], check=True)
     subprocess.run(["git", "-C", "repo", "config", "user.name", "Your Name"], check=True)
-
-    # Add, commit, and push changes
     subprocess.run(["git", "-C", "repo", "add", USER_DATA_FILE], check=True)
     subprocess.run(["git", "-C", "repo", "commit", "-m", "Update user data"], check=True)
     subprocess.run(["git", "-C", "repo", "push"], check=True)
 
-# Start command handler
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_data = {
-        "chat_id": user.id,
-        "username": user.username,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-    }
+def round_to_nearest_15_minutes(minutes: int) -> int:
+    return ((minutes + 14) // 15) * 15
 
-    # Sync repo and load user data
-    sync_repo()
-    file_path = os.path.join("repo", USER_DATA_FILE)
-    if not os.path.exists(file_path):
-        with open(file_path, "w") as file:
-            yaml.dump([], file)
-
-    with open(file_path, "r") as file:
-        data = yaml.safe_load(file) or []
-
-    # Avoid duplicate entries
-    if not any(user["chat_id"] == user_data["chat_id"] for user in data):
-        data.append(user_data)
-
-    with open(file_path, "w") as file:
-        yaml.dump(data, file)
-
-    # Push updated data to repo
-    push_changes()
-
-    # Send a creative welcome message to the user
-    welcome_message = f"""
-🎉 Welcome, {user.first_name}! 🎉
-
-I'm thrilled to have you here. 🚀
-Feel free to explore and interact with the bot. If you have any questions, just type them here, and I'll assist you ASAP!
-
-✨ Have a great time! ✨
-    """
-    await update.message.reply_text(welcome_message)
-
-    # Notify admin silently
-    await context.bot.send_message(
-        chat_id=ADMIN_CHAT_IDS[0],  # Notify the first admin in the list
-        text=f"New user started the bot:\n{yaml.dump(user_data)}",
-    )
-
-# Admin menu handler
-async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Delete the /admin command message
-    try:
-        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
-    except Exception as e:
-        print(f"Failed to delete /admin command message: {e}")
-
-    if str(update.effective_user.id) not in ADMIN_CHAT_IDS:
-        error_message = await update.message.reply_text("Sorry, you are not an admin and cannot access this bot's panel.")
-        # Delete the error message after 5 seconds
-        await asyncio.sleep(5)
-        try:
-            await context.bot.delete_message(chat_id=error_message.chat_id, message_id=error_message.message_id)
-        except Exception as e:
-            print(f"Failed to delete error message: {e}")
-        return
-
-    keyboard = [
-        [InlineKeyboardButton("👥 View User List", callback_data="view_users")],
-        [InlineKeyboardButton("✉️ Send Message to Specific User", callback_data="send_message_user")],
-        [InlineKeyboardButton("📢 Send Message to All Users", callback_data="send_message_all")],
-        [InlineKeyboardButton("🔄 Refresh User Data", callback_data="refresh_data")],
-        [InlineKeyboardButton("🗑️ Remove User from List", callback_data="remove_user")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="cancel")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Welcome to the Admin Panel! Please choose an option:", reply_markup=reply_markup)
-
-# Helper function to send a temporary message
 async def send_temporary_message(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str, delay: int = 5):
-    """Send a message and delete it after a delay."""
     message = await context.bot.send_message(chat_id=chat_id, text=text)
     await asyncio.sleep(delay)
     try:
         await context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
-    except Exception as e:
-        print(f"Failed to delete message: {e}")
+    except Exception:
+        pass
 
-# Callback query handler
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "view_users":
-        sync_repo()
-        file_path = os.path.join("repo", USER_DATA_FILE)
-        with open(file_path, "r") as file:
-            users = yaml.safe_load(file) or []
-
-        if users:
-            user_list = "\n".join(
-                [f"👤 <b>{user['first_name']} {user.get('last_name', '')}</b>\n"
-                 f"🔗 Username: @{user['username'] or 'N/A'}\n"
-                 f"🆔 Chat ID: <code>{user['chat_id']}</code>\n" for user in users]
-            )
-        else:
-            user_list = "No users found."
-
-        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_main")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(f"👥 <b>User List:</b>\n\n{user_list}", reply_markup=reply_markup, parse_mode="HTML")
-
-    elif query.data == "back_to_main":
-        keyboard = [
-            [InlineKeyboardButton("👥 View User List", callback_data="view_users")],
-            [InlineKeyboardButton("✉️ Send Message to Specific User", callback_data="send_message_user")],
-            [InlineKeyboardButton("📢 Send Message to All Users", callback_data="send_message_all")],
-            [InlineKeyboardButton("🔄 Refresh User Data", callback_data="refresh_data")],
-            [InlineKeyboardButton("🗑️ Remove User from List", callback_data="remove_user")],
-            [InlineKeyboardButton("❌ Cancel", callback_data="cancel")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text("Welcome to the Admin Panel! Please choose an option:", reply_markup=reply_markup)
-
-    elif query.data == "send_message_user":
-        sync_repo()
-        file_path = os.path.join("repo", USER_DATA_FILE)
-        with open(file_path, "r") as file:
-            users = yaml.safe_load(file) or []
-
-        keyboard = [
-            [InlineKeyboardButton(f"{user['first_name']} (@{user['username']})", callback_data=f"send_to_{user['chat_id']}")]
-            for user in users
-        ]
-        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text("Select a user to send a message:", reply_markup=reply_markup)
-
-    elif query.data.startswith("send_to_"):
-        chat_id = int(query.data.split("_")[2])
-        context.user_data["target_chat_id"] = chat_id
-        context.user_data["awaiting_message"] = True
-        keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        prompt_message = await query.edit_message_text(
-            f"Please type the message or send the media you want to send to user with Chat ID {chat_id}:",
-            reply_markup=reply_markup
-        )
-        context.user_data["prompt_message_id"] = prompt_message.message_id  # Store the prompt message ID
-
-    elif query.data == "send_message_all":
-        context.user_data["awaiting_broadcast_message"] = True
-        keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        prompt_message = await query.edit_message_text("Please type the message or send the media you want to broadcast:", reply_markup=reply_markup)
-        context.user_data["prompt_message_id"] = prompt_message.message_id  # Store the prompt message ID
-
-    elif query.data == "refresh_data":
-        sync_repo()
-        await send_temporary_message(context, update.effective_chat.id, "🔄 User data refreshed successfully!")
-
-    elif query.data == "remove_user":
-        sync_repo()
-        file_path = os.path.join("repo", USER_DATA_FILE)
-        with open(file_path, "r") as file:
-            users = yaml.safe_load(file) or []
-
-        keyboard = [
-            [InlineKeyboardButton(f"{user['first_name']} (@{user['username']})", callback_data=f"remove_{user['chat_id']}")]
-            for user in users
-        ]
-        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text("Select a user to remove from the list:", reply_markup=reply_markup)
-
-    elif query.data.startswith("remove_"):
-        chat_id = int(query.data.split("_")[1])
-        sync_repo()
-        file_path = os.path.join("repo", USER_DATA_FILE)
-        with open(file_path, "r") as file:
-            users = yaml.safe_load(file) or []
-
-        updated_users = [user for user in users if user["chat_id"] != chat_id]
-
-        with open(file_path, "w") as file:
-            yaml.dump(updated_users, file)
-
-        push_changes()
-        await send_temporary_message(context, update.effective_chat.id, f"User with Chat ID {chat_id} has been removed from the list.")
-
-    elif query.data == "cancel":
-        # Cancel the operation
-        cancel_message = await query.edit_message_text("❌ Operation cancelled.")  # Update the message to indicate cancellation
-        context.user_data.clear()  # Clear any stored data related to ongoing operations
-
-        # Delete the cancel message after 5 seconds
-        await asyncio.sleep(5)
-        try:
-            await context.bot.delete_message(chat_id=cancel_message.chat_id, message_id=cancel_message.message_id)
-        except Exception as e:
-            print(f"Failed to delete cancel message: {e}")
-
-# Helper function to send media or text
 async def send_media_or_text(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int):
+    user_id = update.effective_user.id
     try:
         if update.message.photo:
-            # Handle photo messages
-            photo = update.message.photo[-1]  # Get the highest resolution photo
-            await context.bot.send_photo(chat_id=chat_id, photo=photo.file_id, caption=update.message.caption or "")
+            await context.bot.send_photo(chat_id=chat_id, photo=update.message.photo[-1].file_id, caption=update.message.caption or "")
         elif update.message.video:
-            # Handle video messages with 50 MB limit
-            video = update.message.video
-            if video.file_size > 50 * 1024 * 1024:
-                await update.message.reply_text("The video file size exceeds the 50 MB limit. Please send a smaller file.")
+            if update.message.video.file_size > 50 * 1024 * 1024:
+                await update.message.reply_text(t(user_id, "unsupported_type"))
                 return
-            await context.bot.send_video(chat_id=chat_id, video=video.file_id, caption=update.message.caption or "")
+            await context.bot.send_video(chat_id=chat_id, video=update.message.video.file_id, caption=update.message.caption or "")
         elif update.message.audio:
-            # Handle audio messages with 50 MB limit
-            audio = update.message.audio
-            if audio.file_size > 50 * 1024 * 1024:
-                await update.message.reply_text("The audio file size exceeds the 50 MB limit. Please send a smaller file.")
+            if update.message.audio.file_size > 50 * 1024 * 1024:
+                await update.message.reply_text(t(user_id, "unsupported_type"))
                 return
-            await context.bot.send_audio(chat_id=chat_id, audio=audio.file_id, caption=update.message.caption or "")
+            await context.bot.send_audio(chat_id=chat_id, audio=update.message.audio.file_id, caption=update.message.caption or "")
         elif update.message.voice:
-            # Handle voice messages
-            voice = update.message.voice
-            await context.bot.send_voice(chat_id=chat_id, voice=voice.file_id, caption=update.message.caption or "")
+            await context.bot.send_voice(chat_id=chat_id, voice=update.message.voice.file_id, caption=update.message.caption or "")
         elif update.message.document:
-            # Handle document messages
-            document = update.message.document
-            await context.bot.send_document(chat_id=chat_id, document=document.file_id, caption=update.message.caption or "")
+            await context.bot.send_document(chat_id=chat_id, document=update.message.document.file_id, caption=update.message.caption or "")
         elif update.message.animation:
-            # Handle animation (GIF) messages
-            animation = update.message.animation
-            await context.bot.send_animation(chat_id=chat_id, animation=animation.file_id, caption=update.message.caption or "")
+            await context.bot.send_animation(chat_id=chat_id, animation=update.message.animation.file_id, caption=update.message.caption or "")
         elif update.message.sticker:
-            # Handle sticker messages
-            sticker = update.message.sticker
-            await context.bot.send_sticker(chat_id=chat_id, sticker=sticker.file_id)
+            await context.bot.send_sticker(chat_id=chat_id, sticker=update.message.sticker.file_id)
         elif update.message.video_note:
-            # Handle video note messages
-            video_note = update.message.video_note
-            await context.bot.send_video_note(chat_id=chat_id, video_note=video_note.file_id)
+            await context.bot.send_video_note(chat_id=chat_id, video_note=update.message.video_note.file_id)
         elif update.message.location:
-            # Handle location messages
-            location = update.message.location
-            await context.bot.send_location(chat_id=chat_id, latitude=location.latitude, longitude=location.longitude)
+            await context.bot.send_location(chat_id=chat_id, latitude=update.message.location.latitude, longitude=update.message.location.longitude)
         elif update.message.text:
-            # Handle text messages
             await context.bot.send_message(chat_id=chat_id, text=update.message.text)
         else:
-            await update.message.reply_text("Unsupported message type.")
+            await update.message.reply_text(t(user_id, "unsupported_type"))
     except Exception as e:
-        print(f"Error while sending media or text: {e}")
         await update.message.reply_text(f"Failed to send message: {e}")
 
-# Message handler for forwarding user messages to admins
-async def forward_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Check if the sender is an admin
-    if str(update.effective_user.id) in ADMIN_CHAT_IDS:
-        return  # Do not forward messages from admins to themselves
-
-    user = update.effective_user
-
+def load_users_and_languages():
+    global cached_users, user_languages
     try:
-        # Prepare user information
-        user_info = f"""
-📩 New Message from User:
-👤 Name: {user.first_name} {user.last_name or ""}
-🔗 Username: @{user.username or "N/A"}
-🆔 Chat ID: {user.id}
-        """
-
-        # Send user information to admins
-        for admin_id in ADMIN_CHAT_IDS:
-            await context.bot.send_message(chat_id=admin_id, text=user_info)
-
-        # Forward media or text to admins
-        if update.message.photo or update.message.animation or update.message.document or update.message.video or update.message.audio or update.message.voice or update.message.sticker or update.message.video_note or update.message.location:
-            for admin_id in ADMIN_CHAT_IDS:
-                await send_media_or_text(update, context, admin_id)
-        elif update.message.text:
-            # Forward text messages to admins
-            for admin_id in ADMIN_CHAT_IDS:
-                await context.bot.send_message(chat_id=admin_id, text=update.message.text)
-        else:
-            await update.message.reply_text("Unsupported message type.")
+        sync_repo()
+        file_path = os.path.join("repo", USER_DATA_FILE)
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                cached_users = yaml.safe_load(file) or []
+            for user in cached_users:
+                if "chat_id" in user and "language" in user:
+                    user_languages[user["chat_id"]] = user["language"]
+        print("Users and languages loaded successfully.")
     except Exception as e:
-        print(f"Failed to forward message to admins: {e}")
+        print(f"Error loading users and languages: {e}")
 
-# Message handler for sending a message to a specific user or broadcasting
+def save_users_and_languages():
+    global cached_users
+    try:
+        file_path = os.path.join("repo", USER_DATA_FILE)
+        with open(file_path, "w") as file:
+            yaml.dump(cached_users, file)
+        push_changes()
+        print("Users and languages saved successfully.")
+    except Exception as e:
+        print(f"Error saving users and languages: {e}")
+
+def get_user_language(user_id):
+    return user_languages[user_id]
+
+# ==========================
+# Core Functions
+# ==========================
+async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE, message_type: str):
+    user_id = update.effective_user.id
+    now = datetime.now()
+
+    if now >= user_limit_reset_times[user_id]:
+        user_message_counts[user_id] = defaultdict(int)
+        user_limit_reset_times[user_id] = now + timedelta(minutes=30)
+        if user_id in user_warning_messages:
+            try:
+                await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id])
+            except Exception:
+                pass
+            del user_warning_messages[user_id]
+
+    if user_message_counts[user_id][message_type] >= MESSAGE_LIMITS[message_type]:
+        remaining_time = (user_limit_reset_times[user_id] - now).seconds // 60
+        rounded_time = round_to_nearest_15_minutes(remaining_time)
+        warning_text = t(user_id, "limit_warning", type=message_type, minutes=rounded_time)
+        if user_id in user_warning_messages:
+            try:
+                await context.bot.edit_message_text(chat_id=user_id, message_id=user_warning_messages[user_id], text=warning_text)
+            except Exception:
+                pass
+        else:
+            warning_message = await update.message.reply_text(warning_text)
+            user_warning_messages[user_id] = warning_message.message_id
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+        except Exception:
+            pass
+        return False
+
+    user_message_counts[user_id][message_type] += 1
+    return True
+
+async def forward_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if str(user_id) in ADMIN_CHAT_IDS:
+        return
+    user = update.effective_user
+    user_info = t(
+        user_id, "user_info",
+        name=f"{user.first_name} {user.last_name or ''}",
+        username=user.username or "N/A",
+        chat_id=user.id
+    )
+    for admin_id in ADMIN_CHAT_IDS:
+        await context.bot.send_message(chat_id=admin_id, text=user_info)
+        await send_media_or_text(update, context, admin_id)
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     if context.user_data.get("awaiting_message"):
         target_chat_id = context.user_data.get("target_chat_id")
         if target_chat_id:
-            # Delete the prompt message immediately
             prompt_message_id = context.user_data.get("prompt_message_id")
             if prompt_message_id:
                 try:
                     await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=prompt_message_id)
-                except Exception as e:
-                    print(f"Failed to delete prompt message: {e}")
-                context.user_data.pop("prompt_message_id", None)  # Remove the stored prompt message ID
-
-            # Send the media or message
+                except Exception:
+                    pass
+                context.user_data.pop("prompt_message_id", None)
             await send_media_or_text(update, context, target_chat_id)
-            # Send success message
-            await update.message.reply_text("✅ Message or media sent successfully!")  # Success message
+            await update.message.reply_text(t(user_id, "message_sent"))
         else:
-            await send_temporary_message(context, update.effective_chat.id, "❌ No target user selected.")
+            await send_temporary_message(context, update.effective_chat.id, t(user_id, "no_target_user"))
         context.user_data["awaiting_message"] = False
 
     elif context.user_data.get("awaiting_broadcast_message"):
@@ -350,44 +203,303 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_path = os.path.join("repo", USER_DATA_FILE)
         with open(file_path, "r") as file:
             users = yaml.safe_load(file) or []
-
         for user in users:
-            # Skip sending messages to admins
             if str(user["chat_id"]) in ADMIN_CHAT_IDS:
                 continue
             try:
                 await send_media_or_text(update, context, user["chat_id"])
-            except Exception as e:
-                print(f"Failed to send message to {user['chat_id']}: {e}")
-
-        # Send success message
-        await update.message.reply_text("📢 Message sent to all users.")
-        
-        # Delete the prompt message immediately
+            except Exception:
+                pass
+        await update.message.reply_text(t(user_id, "broadcast_sent"))
         prompt_message_id = context.user_data.get("prompt_message_id")
         if prompt_message_id:
             try:
                 await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=prompt_message_id)
-            except Exception as e:
-                print(f"Failed to delete prompt message: {e}")
-            context.user_data.pop("prompt_message_id", None)  # Remove the stored prompt message ID
+            except Exception:
+                pass
+            context.user_data.pop("prompt_message_id", None)
         context.user_data["awaiting_broadcast_message"] = False
 
     else:
-        # If not awaiting a message, forward it to admins
         await forward_user_message(update, context)
 
-# Main function
-async def main():
-    application = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    user_id = user.id
+    user_data = {
+        "chat_id": user.id,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "language": user_languages[user_id],
+    }
 
+    # Add user to cached_users if not already present
+    if not any(u["chat_id"] == user_data["chat_id"] for u in cached_users):
+        cached_users.append(user_data)
+        save_users_and_languages()
+
+    await update.message.reply_text(t(user_id, "welcome_user", name=user.first_name))
+    await context.bot.send_message(chat_id=ADMIN_CHAT_IDS[0], text=t(user_id, "start_admin_notify", user_data=yaml.dump(user_data)))
+
+# ==========================
+# Language Configuration
+# ==========================
+LANGUAGES = {
+    "en": {
+        "not_admin": "🚫 Sorry, you are not an admin and cannot access this section.\n\nBut don't worry! If you have a question or message for the admins, you can type it here, and I'll forward it to them. 📩",
+        "welcome_admin_panel": "Welcome to the Admin Panel! Please choose an option:",
+        "welcome_user": "🎉 Welcome, {name}! 🎉\nFeel free to explore and interact with the bot.",
+        "message_sent": "✅ Message or media sent successfully!",
+        "broadcast_sent": "📢 Message sent to all users.",
+        "operation_cancelled": "❌ Operation cancelled.",
+        "user_removed": "User with Chat ID {chat_id} has been removed from the list.",
+        "updated_user_list": "👥 <b>Updated User List:</b>\n\n{user_list}",
+        "no_users_found": "No users found.",
+        "select_user": "Select a user to send a message:",
+        "type_message": "Please type the message or send the media you want to send to user with Chat ID {chat_id}:",
+        "type_broadcast": "Please type the message or send the media you want to broadcast:",
+        "refresh_success": "🔄 User data refreshed successfully!",
+        "view_user_list": "👥 View User List",
+        "send_message_user": "✉️ Send Message to Specific User",
+        "send_message_all": "📢 Send Message to All Users",
+        "refresh_data": "🔄 Refresh User Data",
+        "remove_user": "🗑️ Remove User from List",
+        "cancel": "❌ Cancel",
+        "back_to_main": "🔙 Back to Main Menu",
+        "select_language": "Please select your language:",
+        "lang_updated": "Language updated successfully!",
+        "start_admin_notify": "New user started the bot:\n{user_data}",
+        "limit_warning": "⚠️ You have reached the limit for {type} messages.\n⏳ Please wait {minutes} minutes for the limit to reset.",
+        "no_target_user": "❌ No target user selected.",
+        "unsupported_type": "Unsupported message type.",
+        "user_info": "📩 New Message from User:\n👤 Name: {name}\n🔗 Username: @{username}\n🆔 Chat ID: {chat_id}",
+    },
+    "fa": {
+        "not_admin": "🚫 متأسفیم، شما ادمین نیستید و نمی‌توانید به این بخش دسترسی داشته باشید.\n\nاما نگران نباشید! اگر سوال یا پیامی برای ادمین‌ها دارید، می‌توانید همینجا تایپ کنید و من آن را برای ادمین‌ها ارسال می‌کنم. 📩",
+        "welcome_admin_panel": "به پنل ادمین خوش آمدید! لطفاً یک گزینه را انتخاب کنید:",
+        "welcome_user": "🎉 خوش آمدید، {name}! 🎉\nلطفاً از ربات استفاده کنید و اگر سوالی دارید، همینجا بپرسید.",
+        "message_sent": "✅ پیام یا رسانه با موفقیت ارسال شد!",
+        "broadcast_sent": "📢 پیام به همه کاربران ارسال شد.",
+        "operation_cancelled": "❌ عملیات لغو شد.",
+        "user_removed": "کاربر با شناسه {chat_id} از لیست حذف شد.",
+        "updated_user_list": "👥 <b>لیست کاربران به‌روزرسانی شد:</b>\n\n{user_list}",
+        "no_users_found": "هیچ کاربری یافت نشد.",
+        "select_user": "یک کاربر را برای ارسال پیام انتخاب کنید:",
+        "type_message": "لطفاً پیام یا رسانه‌ای که می‌خواهید به کاربر با شناسه {chat_id} ارسال کنید، وارد کنید:",
+        "type_broadcast": "لطفاً پیام یا رسانه‌ای که می‌خواهید به همه کاربران ارسال کنید، وارد کنید:",
+        "refresh_success": "🔄 داده‌های کاربران با موفقیت به‌روزرسانی شد!",
+        "view_user_list": "👥 مشاهده لیست کاربران",
+        "send_message_user": "✉️ ارسال پیام به کاربر خاص",
+        "send_message_all": "📢 ارسال پیام به همه کاربران",
+        "refresh_data": "🔄 بروزرسانی لیست کاربران",
+        "remove_user": "🗑️ حذف کاربر از لیست",
+        "cancel": "❌ لغو",
+        "back_to_main": "🔙 بازگشت به منوی اصلی",
+        "select_language": "لطفاً زبان خود را انتخاب کنید:",
+        "lang_updated": "زبان با موفقیت تغییر کرد!",
+        "start_admin_notify": "کاربر جدید ربات را استارت کرد:\n{user_data}",
+        "limit_warning": "⚠️ شما به محدودیت ارسال پیام {type} رسیده‌اید.\n⏳ لطفاً {minutes} دقیقه صبر کنید تا محدودیت برداشته شود.",
+        "no_target_user": "❌ هیچ کاربری انتخاب نشده است.",
+        "unsupported_type": "نوع پیام پشتیبانی نمی‌شود.",
+        "user_info": "📩 پیام جدید از کاربر:\n👤 نام: {name}\n🔗 نام کاربری: @{username}\n🆔 شناسه: {chat_id}",
+    },
+}
+DEFAULT_LANGUAGE = "en"
+user_languages = defaultdict(lambda: DEFAULT_LANGUAGE)
+
+def get_lang(user_id):
+    return user_languages[user_id]
+
+def t(user_id, key, **kwargs):
+    lang = get_user_language(user_id)
+    return LANGUAGES[lang][key].format(**kwargs)
+
+async def lang(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    keyboard = [
+        [InlineKeyboardButton("English", callback_data="lang_en")],
+        [InlineKeyboardButton("فارسی", callback_data="lang_fa")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        LANGUAGES["en"]["select_language"] + "\n" + LANGUAGES["fa"]["select_language"],
+        reply_markup=reply_markup
+    )
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    await query.answer()
+
+    if query.data.startswith("lang_"):
+        lang = query.data.split("_")[1]
+        user_languages[user_id] = lang
+
+        # Update language in cached_users
+        for user in cached_users:
+            if user["chat_id"] == user_id:
+                user["language"] = lang
+                break
+        save_users_and_languages()
+
+        await query.edit_message_text(
+            LANGUAGES["en"]["lang_updated"] + "\n" + LANGUAGES["fa"]["lang_updated"]
+        )
+        return
+
+    if query.data == "view_users":
+        sync_repo()
+        file_path = os.path.join("repo", USER_DATA_FILE)
+        with open(file_path, "r") as file:
+            users = yaml.safe_load(file) or []
+        if users:
+            user_list = "\n".join(
+                [f"👤 <b>{user['first_name']} {user.get('last_name', '')}</b>\n"
+                 f"🔗 Username: @{user['username'] or 'N/A'}\n"
+                 f"🆔 Chat ID: <code>{user['chat_id']}</code>\n" for user in users]
+            )
+        else:
+            user_list = t(user_id, "no_users_found")
+        keyboard = [[InlineKeyboardButton(t(user_id, "back_to_main"), callback_data="back_to_main")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(t(user_id, "updated_user_list", user_list=user_list), reply_markup=reply_markup, parse_mode="HTML")
+
+    elif query.data == "back_to_main":
+        keyboard = [
+            [InlineKeyboardButton(t(user_id, "view_user_list"), callback_data="view_users")],
+            [InlineKeyboardButton(t(user_id, "send_message_user"), callback_data="send_message_user")],
+            [InlineKeyboardButton(t(user_id, "send_message_all"), callback_data="send_message_all")],
+            [InlineKeyboardButton(t(user_id, "refresh_data"), callback_data="refresh_data")],
+            [InlineKeyboardButton(t(user_id, "remove_user"), callback_data="remove_user")],
+            [InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(t(user_id, "welcome_admin_panel"), reply_markup=reply_markup)
+
+    elif query.data == "send_message_user":
+        sync_repo()
+        file_path = os.path.join("repo", USER_DATA_FILE)
+        with open(file_path, "r") as file:
+            users = yaml.safe_load(file) or []
+        keyboard = [
+            [InlineKeyboardButton(f"{user['first_name']} (@{user['username']})", callback_data=f"send_to_{user['chat_id']}")]
+            for user in users
+        ]
+        keyboard.append([InlineKeyboardButton(t(user_id, "back_to_main"), callback_data="back_to_main")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(t(user_id, "select_user"), reply_markup=reply_markup)
+
+    elif query.data.startswith("send_to_"):
+        chat_id = int(query.data.split("_")[2])
+        context.user_data["target_chat_id"] = chat_id
+        context.user_data["awaiting_message"] = True
+        keyboard = [[InlineKeyboardButton(t(user_id, "back_to_main"), callback_data="back_to_main")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        prompt_message = await query.edit_message_text(
+            t(user_id, "type_message", chat_id=chat_id),
+            reply_markup=reply_markup
+        )
+        context.user_data["prompt_message_id"] = prompt_message.message_id
+
+    elif query.data == "send_message_all":
+        context.user_data["awaiting_broadcast_message"] = True
+        keyboard = [[InlineKeyboardButton(t(user_id, "back_to_main"), callback_data="back_to_main")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        prompt_message = await query.edit_message_text(t(user_id, "type_broadcast"), reply_markup=reply_markup)
+        context.user_data["prompt_message_id"] = prompt_message.message_id
+
+    elif query.data == "refresh_data":
+        sync_repo()
+        await send_temporary_message(context, update.effective_chat.id, t(user_id, "refresh_success"))
+
+    elif query.data == "remove_user":
+        sync_repo()
+        file_path = os.path.join("repo", USER_DATA_FILE)
+        with open(file_path, "r") as file:
+            users = yaml.safe_load(file) or []
+        keyboard = [
+            [InlineKeyboardButton(f"{user['first_name']} (@{user['username']})", callback_data=f"remove_{user['chat_id']}")]
+            for user in users
+        ]
+        keyboard.append([InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(t(user_id, "remove_user"), reply_markup=reply_markup)
+
+    elif query.data.startswith("remove_"):
+        chat_id = int(query.data.split("_")[1])
+        sync_repo()
+        file_path = os.path.join("repo", USER_DATA_FILE)
+        with open(file_path, "r") as file:
+            users = yaml.safe_load(file) or []
+        updated_users = [user for user in users if user["chat_id"] != chat_id]
+        with open(file_path, "w") as file:
+            yaml.dump(updated_users, file)
+        push_changes()
+        await send_temporary_message(context, update.effective_chat.id, t(user_id, "user_removed", chat_id=chat_id))
+        sync_repo()
+        with open(file_path, "r") as file:
+            refreshed_users = yaml.safe_load(file) or []
+        if refreshed_users:
+            user_list = "\n".join(
+                [f"👤 <b>{user['first_name']} {user.get('last_name', '')}</b>\n"
+                 f"🔗 Username: @{user['username'] or 'N/A'}\n"
+                 f"🆔 Chat ID: <code>{user['chat_id']}</code>\n" for user in refreshed_users]
+            )
+        else:
+            user_list = t(user_id, "no_users_found")
+        keyboard = [[InlineKeyboardButton(t(user_id, "back_to_main"), callback_data="back_to_main")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=t(user_id, "updated_user_list", user_list=user_list), reply_markup=reply_markup, parse_mode="HTML")
+
+    elif query.data == "cancel":
+        cancel_message = await query.edit_message_text(t(user_id, "operation_cancelled"))
+        context.user_data.clear()
+        await asyncio.sleep(5)
+        try:
+            await context.bot.delete_message(chat_id=cancel_message.chat_id, message_id=cancel_message.message_id)
+        except Exception:
+            pass
+
+async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+    except Exception:
+        pass
+    user_id = update.effective_user.id
+    if str(user_id) not in ADMIN_CHAT_IDS:
+        error_message = await update.message.reply_text(t(user_id, "not_admin"))
+        await asyncio.sleep(5)
+        try:
+            await context.bot.delete_message(chat_id=error_message.chat_id, message_id=error_message.message_id)
+        except Exception:
+            pass
+        return
+    keyboard = [
+        [InlineKeyboardButton(t(user_id, "view_user_list"), callback_data="view_users")],
+        [InlineKeyboardButton(t(user_id, "send_message_user"), callback_data="send_message_user")],
+        [InlineKeyboardButton(t(user_id, "send_message_all"), callback_data="send_message_all")],
+        [InlineKeyboardButton(t(user_id, "refresh_data"), callback_data="refresh_data")],
+        [InlineKeyboardButton(t(user_id, "remove_user"), callback_data="remove_user")],
+        [InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")],
+    ]
+    await update.message.reply_text(t(user_id, "welcome_admin_panel"), reply_markup=InlineKeyboardMarkup(keyboard))
+
+# ==========================
+# Main Function
+# ==========================
+async def main():
+    load_users_and_languages()  # Load users and languages from YAML file
+
+    application = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("admin", admin_menu))
+    application.add_handler(CommandHandler("lang", lang))
     application.add_handler(CallbackQueryHandler(button))
-    application.add_handler(MessageHandler(filters.ALL, handle_message))  # Updated to handle all message types
+    application.add_handler(MessageHandler(filters.ALL, handle_message))
 
-    # Run the bot
-    await application.run_polling()
+    print("Bot is starting...")
+    await application.run_polling()  # Use polling for simplicity in GitHub Actions
 
 if __name__ == "__main__":
     asyncio.run(main())
