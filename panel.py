@@ -95,7 +95,7 @@ def button(update: Update, context: CallbackContext):
 
 # Main function
 def main():
-    updater = Updater(token=os.getenv("BOT_TOKEN"))
+    updater = Updater(token=os.getenv("TELEGRAM_BOT_TOKEN"))
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
