@@ -10,6 +10,10 @@ jobs:
   panel:
     runs-on: ubuntu-latest
 
+    concurrency: # Prevent overlapping workflows
+      group: panel-bot
+      cancel-in-progress: true
+
     environment: Deployment 1
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -29,4 +33,6 @@ jobs:
         run: pip install python-telegram-bot pyyaml nest_asyncio
 
       - name: Run panel
-        run: python panel.py
+        run: |
+          echo "Starting the bot..."
+          python panel.py
