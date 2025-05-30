@@ -23,10 +23,9 @@ MESSAGE_LIMITS = {  # Message limits per user
     "photo": 10,
     "sticker": 10,
     "voice": 5,
-    "gif": 5,
     "video_note": 5,
     "audio": 3,
-    "animation": 5,
+    "animation": 1,
 }
 
 # ==========================
@@ -135,9 +134,11 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     now = datetime.now()
 
+    # Reset message counts if the reset time has passed
     if now >= user_limit_reset_times[user_id]:
         user_message_counts[user_id] = defaultdict(int)
         user_limit_reset_times[user_id] = now + timedelta(minutes=30)
+        # Clear any existing warning messages
         if user_id in user_warning_messages:
             try:
                 await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id])
@@ -145,10 +146,20 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
                 pass
             del user_warning_messages[user_id]
 
-    if user_message_counts[user_id][message_type] >= MESSAGE_LIMITS[message_type]:
+    # Increment the message count for the specific message type
+    user_message_counts[user_id][message_type] += 1
+
+    # Check if the user has exceeded the limit for the given message type
+    if user_message_counts[user_id][message_type] > MESSAGE_LIMITS.get(message_type, 0):
+        # Apply the 30-minute restriction
+        user_limit_reset_times[user_id] = now + timedelta(minutes=30)
+
+        # Calculate remaining time and round to the nearest 15 minutes
         remaining_time = (user_limit_reset_times[user_id] - now).seconds // 60
         rounded_time = round_to_nearest_15_minutes(remaining_time)
         warning_text = t(user_id, "limit_warning", type=message_type, minutes=rounded_time)
+
+        # Send or update the warning message
         if user_id in user_warning_messages:
             try:
                 await context.bot.edit_message_text(chat_id=user_id, message_id=user_warning_messages[user_id], text=warning_text)
@@ -157,13 +168,22 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
         else:
             warning_message = await update.message.reply_text(warning_text)
             user_warning_messages[user_id] = warning_message.message_id
+
+        # Delete the user's message to enforce the limit
         try:
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         except Exception:
             pass
         return False
 
-    user_message_counts[user_id][message_type] += 1
+    # Check if the warning message should be deleted after the limit reset time
+    if user_id in user_warning_messages and now >= user_limit_reset_times[user_id]:
+        try:
+            await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id])
+        except Exception:
+            pass
+        del user_warning_messages[user_id]
+
     return True
 
 async def forward_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -183,6 +203,30 @@ async def forward_user_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+
+    # Determine the type of message being sent
+    if update.message.text:
+        message_type = "text"
+    elif update.message.photo:
+        message_type = "photo"
+    elif update.message.sticker:
+        message_type = "sticker"
+    elif update.message.voice:
+        message_type = "voice"
+    elif update.message.video_note:
+        message_type = "video_note"
+    elif update.message.audio:
+        message_type = "audio"
+    elif update.message.animation:
+        message_type = "animation"
+    else:
+        message_type = "unknown"
+
+    # Check if the message exceeds the limit
+    if not await check_message_limit(update, context, message_type):
+        return
+
+    # Handle other message scenarios
     if context.user_data.get("awaiting_message"):
         target_chat_id = context.user_data.get("target_chat_id")
         if target_chat_id:
