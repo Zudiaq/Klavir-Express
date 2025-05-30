@@ -3,6 +3,7 @@ import os
 import subprocess
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
+import time
 
 # Load admin chat ID and GitHub token from secrets
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
@@ -102,7 +103,10 @@ def main():
     dispatcher.add_handler(CallbackQueryHandler(button))
 
     updater.start_polling()
-    updater.idle()
+
+    # Keep the bot running for 6 hours
+    time.sleep(6 * 60 * 60)
+    updater.stop()
 
 if __name__ == "__main__":
     main()
