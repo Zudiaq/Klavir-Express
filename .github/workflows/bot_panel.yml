@@ -1,0 +1,29 @@
+name: Restart Telegram Bot
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  restart-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: pip install python-telegram-bot pyyaml
+
+      - name: Run bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+        run: |
+          pkill -f telegram_bot.py || true
+          nohup python c:\Users\Zodiac\Desktop\New folder (2)\telegram_bot.py &
