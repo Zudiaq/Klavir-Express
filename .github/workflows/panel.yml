@@ -1,4 +1,4 @@
-name: Telegram Bot Restart
+name: Panel
 
 on:
   workflow_dispatch: # Allow manual start
