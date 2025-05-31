@@ -1,9 +1,6 @@
 name: Test MP3 Link
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -14,40 +11,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-
-      - name: Install system dependencies
+      - name: Fetch MP3 link from API
+        id: fetch-mp3
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-4-1 \
-            libgraphene-1.0-0 \
-            libwoff1 \
-            libvpx-dev \
-            libevent-2.1-7 \
-            libopus0 \
-            libgstreamer1.0-0 \
-            libgstreamer-plugins-base1.0-0 \
-            libgstreamer-gl1.0-0 \
-            libgstreamer-plugins-bad1.0-0 \
-            libflite1 \
-            libavif-dev \
-            libharfbuzz-icu0 \
-            libsecret-1-0 \
-            libhyphen0 \
-            libmanette-0.2-0 \
-            libgles2-mesa-dev \
-            x264
-
-      - name: Install dependencies
-        run: |
-          npm install playwright
+          API_URL="https://cdn-ytb.zm.io.vn/download?video_id=GdU6snztM0A&quality=128kbps&ext=m4a&token=1748719492.Vi1tL4QHow5XFiOdUswiLWUE04xjxWr5miiR8-5imog" # Replace with your API URL
+          RESPONSE=$(curl -s $API_URL)
+          echo "API Response: $RESPONSE"
+          echo "::set-output name=mp3_url::$(echo $RESPONSE | jq -r '.mp3_url')"
 
       - name: Test MP3 link
+        id: test-mp3
         run: |
-          npx playwright install
-          node -e 'const { chromium } = require("playwright"); (async () => { const browser = await chromium.launch(); const context = await browser.newContext({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" }); const page = await context.newPage(); const url = "https://cdn-ytb.zm.io.vn/download?video_id=GdU6snztM0A&quality=128kbps&ext=m4a&token=1748719492.Vi1tL4QHow5XFiOdUswiLWUE04xjxWr5miiR8-5imog"; try { console.log(`Testing URL: ${url}`); const response = await page.goto(url); if (response && response.status() === 200) { console.log("MP3 link is valid."); } else { const status = response ? response.status() : "No response"; console.error(`Failed with status: ${status}. Please check if the URL is correct or accessible.`); process.exit(1); } } catch (error) { console.error("Error testing MP3 link:", error); process.exit(1); } finally { await browser.close(); } })();'
+          MP3_URL="${{ steps.fetch-mp3.outputs.mp3_url }}"
+          echo "Testing MP3 URL: $MP3_URL"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $MP3_URL)
+          echo "MP3 Link Response Code: $RESPONSE"
+          echo "::set-output name=response_code::$RESPONSE"
 
+      - name: Log response
+        run: |
+          echo "MP3 URL: ${{ steps.fetch-mp3.outputs.mp3_url }}"
+          echo "Response Code: ${{ steps.test-mp3.outputs.response_code }}"
