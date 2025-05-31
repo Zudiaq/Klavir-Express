@@ -7,7 +7,12 @@ jobs:
 
   restart:
     runs-on: ubuntu-latest
-
+    environment: Deployment 1
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+      GH_PAT: ${{ secrets.GH_PAT }}
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
