@@ -7,6 +7,7 @@ import asyncio
 import nest_asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta
+import sys
 
 # ==========================
 # Configuration Variables
@@ -33,10 +34,8 @@ LIMIT_DURATION_MINUTES = 30  # Duration of the limit in minutes
 # Global Variables
 # ==========================
 user_message_counts = defaultdict(lambda: defaultdict(int))
-user_limit_reset_times = defaultdict(lambda: datetime.now() + timedelta(minutes=30))
-user_warning_messages = {}
-user_languages = defaultdict(lambda: DEFAULT_LANGUAGE)
-cached_users = []  # Cache for user list
+user_limit_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now() + timedelta(minutes=LIMIT_DURATION_MINUTES)))
+user_warning_messages = defaultdict(dict)  # Store warning messages per user and media type
 
 # ==========================
 # Helper Functions
@@ -135,43 +134,43 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     now = datetime.now()
 
-    # Reset message counts if the reset time has passed
-    if now >= user_limit_reset_times[user_id]:
-        user_message_counts[user_id] = defaultdict(int)
-        user_limit_reset_times[user_id] = now + timedelta(minutes=LIMIT_DURATION_MINUTES)
-        # Clear any existing warning messages
-        if user_id in user_warning_messages:
+    # Reset message counts for the specific message type if the reset time has passed
+    if now >= user_limit_reset_times[user_id][message_type]:
+        user_message_counts[user_id][message_type] = 0
+        user_limit_reset_times[user_id][message_type] = now + timedelta(minutes=LIMIT_DURATION_MINUTES)
+        # Clear the warning message for this message type
+        if message_type in user_warning_messages[user_id]:
             try:
-                await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id])
+                await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id][message_type])
             except Exception:
                 pass
-            del user_warning_messages[user_id]
+            del user_warning_messages[user_id][message_type]
 
     # Increment the message count for the specific message type
     user_message_counts[user_id][message_type] += 1
 
     # Check if the user has exceeded the limit for the given message type
     if user_message_counts[user_id][message_type] > MESSAGE_LIMITS.get(message_type, 0):
-        # Apply the restriction
-        user_limit_reset_times[user_id] = now + timedelta(minutes=LIMIT_DURATION_MINUTES)
+        # Apply the restriction for this message type
+        user_limit_reset_times[user_id][message_type] = now + timedelta(minutes=LIMIT_DURATION_MINUTES)
 
         # Calculate remaining time and round to the nearest 15 minutes
-        remaining_time = (user_limit_reset_times[user_id] - now).seconds // 60
+        remaining_time = (user_limit_reset_times[user_id][message_type] - now).seconds // 60
         rounded_time = round_to_nearest_15_minutes(remaining_time)
         warning_text = t(user_id, "limit_warning", type=message_type, minutes=rounded_time)
 
-        # Send or update the warning message
-        if user_id in user_warning_messages:
+        # Send or update the warning message for this message type
+        if message_type in user_warning_messages[user_id]:
             try:
-                await context.bot.edit_message_text(chat_id=user_id, message_id=user_warning_messages[user_id], text=warning_text)
+                await context.bot.edit_message_text(chat_id=user_id, message_id=user_warning_messages[user_id][message_type], text=warning_text)
             except Exception:
                 pass
         else:
             warning_message = await update.message.reply_text(warning_text)
-            user_warning_messages[user_id] = warning_message.message_id
+            user_warning_messages[user_id][message_type] = warning_message.message_id
 
         # Schedule deletion of the warning message after the limit duration
-        asyncio.create_task(delete_warning_message(context, user_id, LIMIT_DURATION_MINUTES * 60))
+        asyncio.create_task(delete_warning_message(context, user_id, message_type, LIMIT_DURATION_MINUTES * 60))
 
         # Delete the user's message to enforce the limit
         try:
@@ -182,14 +181,14 @@ async def check_message_limit(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     return True
 
-async def delete_warning_message(context: ContextTypes.DEFAULT_TYPE, user_id: int, delay: int):
+async def delete_warning_message(context: ContextTypes.DEFAULT_TYPE, user_id: int, message_type: str, delay: int):
     await asyncio.sleep(delay)
-    if user_id in user_warning_messages:
+    if message_type in user_warning_messages[user_id]:
         try:
-            await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id])
+            await context.bot.delete_message(chat_id=user_id, message_id=user_warning_messages[user_id][message_type])
         except Exception:
             pass
-        del user_warning_messages[user_id]
+        del user_warning_messages[user_id][message_type]
 
 async def forward_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -536,6 +535,20 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(t(user_id, "welcome_admin_panel"), reply_markup=InlineKeyboardMarkup(keyboard))
 
 # ==========================
+# Restart Functions
+# ==========================
+async def restart_panel():
+    """
+    Restarts the panel every 5 hours with a delay to allow workflow restart.
+    """
+    while True:
+        await asyncio.sleep((5 * 60 * 60) - 300)  # Wait for 5 hours minus 5 minutes
+        print("Preparing to restart the panel...")
+        await asyncio.sleep(300)  # Wait for 5 minutes to allow workflow restart
+        print("Restarting the panel...")
+        os.execv(sys.executable, ['python'] + sys.argv)  # Restart the script
+
+# ==========================
 # Main Function
 # ==========================
 async def main():
@@ -547,6 +560,9 @@ async def main():
     application.add_handler(CommandHandler("lang", lang))
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.ALL, handle_message))
+
+    # Start the restart task
+    asyncio.create_task(restart_panel())
 
     print("Bot is starting...")
     await application.run_polling()  # Use polling for simplicity in GitHub Actions
