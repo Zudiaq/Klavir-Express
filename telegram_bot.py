@@ -163,7 +163,7 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
         query = f"{track_name} {artist_name}"
         if album_name:
             query += f" {album_name}"
-        video_url = search_youtube_video(query)
+        video_url = search_youtube_video(query, artist_name)  # Pass artist_name explicitly
         if not video_url:
             logging.error("No YouTube video found for the query")
             return None
