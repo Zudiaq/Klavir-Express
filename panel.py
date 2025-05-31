@@ -8,6 +8,7 @@ import nest_asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta
 import sys
+import requests  # For triggering GitHub workflows
 
 # ==========================
 # Configuration Variables
@@ -549,6 +550,36 @@ async def restart_panel():
         os.execv(sys.executable, ['python'] + sys.argv)  # Restart the script
 
 # ==========================
+# Trigger Workflow Function
+# ==========================
+async def trigger_restart_workflow():
+    """
+    Triggers the 'panel_restart' workflow on GitHub after 4 hours and 55 minutes.
+    """
+    await asyncio.sleep((4 * 60 * 60) + (55 * 60))  # Wait for 4 hours and 55 minutes
+    print("Triggering the 'panel_restart' workflow...")
+
+    github_token = os.getenv("GH_PAT")  # GitHub Personal Access Token
+    repo = "Zudiaq/Klavir-Express"  # Repository name
+    workflow = "panel_restart.yml"  # Workflow file name
+
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow}/dispatches"
+    headers = {"Authorization": f"Bearer {github_token}"}
+    data = {"ref": "main"}  # Branch to trigger the workflow on
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 204:
+        print("Successfully triggered the 'panel_restart' workflow.")
+    else:
+        print(f"Failed to trigger the workflow: {response.status_code}, {response.text}")
+
+    # Wait 1 minute before stopping the script
+    await asyncio.sleep(60)
+    print("Stopping the panel...")
+    sys.exit(0)
+
+# ==========================
 # Main Function
 # ==========================
 async def main():
@@ -561,8 +592,8 @@ async def main():
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.ALL, handle_message))
 
-    # Start the restart task
-    asyncio.create_task(restart_panel())
+    # Start the restart workflow trigger task
+    asyncio.create_task(trigger_restart_workflow())
 
     print("Bot is starting...")
     await application.run_polling()  # Use polling for simplicity in GitHub Actions
