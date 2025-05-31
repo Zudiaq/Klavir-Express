@@ -1,34 +1,27 @@
-name: Test MP3 Link
+name: Download MP3 and Verify
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  test-mp3-link:
+  download-and-verify:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Fetch MP3 link from API
-        id: fetch-mp3
+      - name: Download MP3 file
         run: |
-          API_URL="https://cdn-ytb.zm.io.vn/download?video_id=GdU6snztM0A&quality=128kbps&ext=m4a&token=1748719492.Vi1tL4QHow5XFiOdUswiLWUE04xjxWr5miiR8-5imog" # Replace with your API URL
-          RESPONSE=$(curl -s $API_URL)
-          echo "API Response: $RESPONSE"
-          echo "::set-output name=mp3_url::$(echo $RESPONSE | jq -r '.mp3_url')"
+          curl -o downloaded.mp3 "https://cdn-ytb.zm.io.vn/download?video_id=GdU6snztM0A&quality=128kbps&ext=m4a&token=1748719492.Vi1tL4QHow5XFiOdUswiLWUE04xjxWr5miiR8-5imog"
 
-      - name: Test MP3 link
-        id: test-mp3
+      - name: Verify file exists
         run: |
-          MP3_URL="${{ steps.fetch-mp3.outputs.mp3_url }}"
-          echo "Testing MP3 URL: $MP3_URL"
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $MP3_URL)
-          echo "MP3 Link Response Code: $RESPONSE"
-          echo "::set-output name=response_code::$RESPONSE"
-
-      - name: Log response
-        run: |
-          echo "MP3 URL: ${{ steps.fetch-mp3.outputs.mp3_url }}"
-          echo "Response Code: ${{ steps.test-mp3.outputs.response_code }}"
+          if [ -f "downloaded.mp3" ]; then
+            echo "File downloaded successfully."
+          else
+            echo "File download failed."
+            exit 1
+          fi
