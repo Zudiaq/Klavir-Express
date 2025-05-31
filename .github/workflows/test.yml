@@ -18,22 +18,22 @@ jobs:
       - name: Check MP3 Link
         run: |
           python -c "
-import requests
+          import requests
 
-url = 'https:\/\/alpha.123tokyo.xyz\/get.php\/e\/58\/41vY5Y0Cgio.mp3?n=Ma%CC%8Aneskin%20-%20Back%20To%20Black%20COVER%20%28Rooftop%20Sessions%29&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D&h=OHkSfGvTpAMf9HANT6_6gw&s=1748717977&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D' 
+          url = 'https:\/\/alpha.123tokyo.xyz\/get.php\/e\/58\/41vY5Y0Cgio.mp3?n=Ma%CC%8Aneskin%20-%20Back%20To%20Black%20COVER%20%28Rooftop%20Sessions%29&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D&h=OHkSfGvTpAMf9HANT6_6gw&s=1748717977&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D' 
 
-try:
-    response = requests.head(url, allow_redirects=True, timeout=10)
-    status = response.status_code
-    content_type = response.headers.get('Content-Type', '')
+          try:
+              response = requests.head(url, allow_redirects=True, timeout=10)
+              status = response.status_code
+              content_type = response.headers.get('Content-Type', '')
 
-    if status == 200 and 'audio' in content_type:
-        print('✅ MP3 link is valid.')
-    else:
-        print(f'⚠️ Invalid link. Status: {status}, Content-Type: {content_type}')
-        exit(1)
+              if status == 200 and 'audio' in content_type:
+                  print('✅ MP3 link is valid.')
+              else:
+                  print(f'⚠️ Invalid link. Status: {status}, Content-Type: {content_type}')
+                  exit(1)
 
-except Exception as e:
-    print(f'❌ Error: {e}')
-    exit(1)
-"
+          except Exception as e:
+              print(f'❌ Error: {e}')
+              exit(1)
+          "
