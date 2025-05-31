@@ -65,7 +65,8 @@ jobs:
               if (response && response.status() === 200) {
                 console.log('MP3 link is valid.');
               } else {
-                console.error(`Failed with status: ${response ? response.status() : 'No response'}`);
+                const status = response ? response.status() : 'No response';
+                console.error(`Failed with status: ${status}`);
                 process.exit(1);
               }
             } catch (error) {
