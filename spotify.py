@@ -59,7 +59,7 @@ def load_sent_songs():
         with open(SENT_SONGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
             return set(tuple(item) for item in data)
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         logging.warning(f"Could not load sent songs file: {e}")
         return set()
 
