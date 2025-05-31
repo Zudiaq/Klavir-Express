@@ -31,6 +31,13 @@ MESSAGE_LIMITS = {  # Message limits per user
 }
 LIMIT_DURATION_MINUTES = 30  # Duration of the limit in minutes
 
+# Command rate limits (modifiable by the developer)
+COMMAND_RATE_LIMITS = {
+    "start": {"limit": 5, "reset_duration": timedelta(days=1)},  # 5 times per day
+    "admin": {"limit": 5, "reset_duration": timedelta(days=1)},  # 5 times per day
+    # Add other commands here with their limits
+}
+
 # ==========================
 # Global Variables
 # ==========================
@@ -38,7 +45,7 @@ user_message_counts = defaultdict(lambda: defaultdict(int))
 user_limit_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now() + timedelta(minutes=LIMIT_DURATION_MINUTES)))
 user_warning_messages = defaultdict(dict)  # Store warning messages per user and media type
 user_command_counts = defaultdict(lambda: defaultdict(int))  # Track command usage per user
-user_command_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now() + timedelta(days=1)))  # Reset times for commands
+user_command_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now()))  # Reset times for commands
 
 # ==========================
 # Helper Functions
@@ -132,20 +139,25 @@ def get_user_language(user_id):
 
 async def check_command_limit(user_id: int, command: str) -> bool:
     """
-    Check if the user has exceeded the daily limit for a specific command.
+    Check if the user has exceeded the limit for a specific command.
     """
     now = datetime.now()
+
+    # Get the command limit and reset duration
+    command_limit = COMMAND_RATE_LIMITS.get(command, {"limit": 0, "reset_duration": timedelta(days=1)})
+    limit = command_limit["limit"]
+    reset_duration = command_limit["reset_duration"]
 
     # Reset command count if the reset time has passed
     if now >= user_command_reset_times[user_id][command]:
         user_command_counts[user_id][command] = 0
-        user_command_reset_times[user_id][command] = now + timedelta(days=1)
+        user_command_reset_times[user_id][command] = now + reset_duration
 
     # Increment the command count
     user_command_counts[user_id][command] += 1
 
     # Check if the user has exceeded the limit
-    if user_command_counts[user_id][command] > 5:
+    if user_command_counts[user_id][command] > limit:
         return False  # Exceeded limit
 
     return True  # Within limit
