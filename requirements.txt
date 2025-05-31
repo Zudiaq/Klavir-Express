@@ -3,3 +3,4 @@ python-dotenv
 requests
 translate
 pyyaml
+pydub
