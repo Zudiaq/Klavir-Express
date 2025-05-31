@@ -1,163 +1,167 @@
-import os
-import re
-import logging
-import http.client
+import mutagen
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB
+from youtube_downloader import search_youtube_video, fetch_youtube_download_link
 import requests
-import yaml
-import json
-from datetime import datetime
+import os
+import logging
 from dotenv import load_dotenv
+from config import DEBUG_MODE, ENABLE_TELEGRAM
+from pydub import AudioSegment
 
 load_dotenv()
 
-YAML_KEYS_FILE = "youtube-mp3-api-stats.yaml"
-GH_PAT = os.getenv("GH_PAT")
-GITHUB_REPO = "Zudiaq/youtube-mp3-apis"  # Replace with actual repo
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
-
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-def pull_yaml_keys():
+def send_message(message):
     """
-    Pull the YAML file containing API keys from the private GitHub repository.
+    Send a text message to the configured Telegram chat.
+    Args:
+        message (str): The message text to send.
+    Returns:
+        dict: Telegram API response or None if error.
     """
-    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{YAML_KEYS_FILE}"
-    headers = {"Authorization": f"token {GH_PAT}"}
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    with open(YAML_KEYS_FILE, "w", encoding="utf-8") as f:
-        f.write(response.text)
-
-def load_service_keys(service_name):
-    """
-    Load API keys for the specified service from the YAML file.
-    """
-    if not os.path.exists(YAML_KEYS_FILE):
-        logging.info(f"YAML keys file not found. Pulling keys from GitHub.")
-        pull_yaml_keys()
+    if not ENABLE_TELEGRAM:
+        logging.info("Telegram messaging is disabled in config")
+        return None
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    if not token or not chat_id:
+        logging.error("Telegram credentials are not set in environment variables")
+        return None
+    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    payload = {'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'}
     try:
-        with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        logging.debug(f"Loaded YAML data: {data}")  # Add this line for debugging
-        # Adjust for the actual key structure in the YAML file
-        service_keys = data.get(f"{service_name} keys", [])
-        if not service_keys:
-            logging.error(f"No keys found for service: {service_name}")
-        return service_keys
-    except yaml.YAMLError as e:
-        logging.error(f"Error parsing YAML file: {e}")
-        return []
-    except Exception as e:
-        logging.error(f"Unexpected error loading service keys: {e}")
-        return []
+        logging.debug(f"Sending message to Telegram chat {chat_id}")
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        logging.debug("Message sent successfully")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error sending message: {e}")
+        return None
 
-def update_key_usage(service_name, key, reset_day):
+def send_audio_with_caption(audio_path, caption):
     """
-    Update the usage count of an API key and handle monthly reset logic.
+    Send an audio file with caption to the configured Telegram chat.
+    Args:
+        audio_path (str): Path to the audio file.
+        caption (str): Caption text for the audio.
+    Returns:
+        dict: Telegram API response or None if error.
     """
-    with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    keys = data.get(service_name, [])
-    today = datetime.now().day
-    for entry in keys:
-        if entry["key"] == key:
-            if today == reset_day and entry["last_reset"] != str(datetime.now().date()):
-                entry["usage"] = 1
-                entry["last_reset"] = str(datetime.now().date())
-            else:
-                entry["usage"] += 1
-            break
-    with open(YAML_KEYS_FILE, "w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f)
+    if not ENABLE_TELEGRAM:
+        logging.info("Telegram messaging is disabled in config")
+        return None
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    if not token or not chat_id:
+        logging.error("Telegram credentials are not set in environment variables")
+        return None
+    url = f'https://api.telegram.org/bot{token}/sendAudio'
+    try:
+        with open(audio_path, 'rb') as audio_file:
+            files = {'audio': audio_file}
+            data = {'chat_id': chat_id, 'caption': caption, 'parse_mode': 'HTML'}
+            logging.debug(f"Sending audio to Telegram chat {chat_id}")
+            response = requests.post(url, files=files, data=data)
+            response.raise_for_status()
+            logging.debug("Audio sent successfully")
+            return response.json()
+    except FileNotFoundError:
+        logging.error(f"Audio file not found: {audio_path}")
+        return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error sending audio: {e}")
+        return None
 
-def get_available_key(service_name):
+def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
-    Get the first available API key for the specified service.
+    Send a music recommendation to Telegram with available metadata.
+    Downloads the audio from YouTube, converts it to MP3, embeds metadata, and sends the MP3 file.
     """
-    keys = load_service_keys(service_name)
-    for entry in keys:
-        if entry["usage"] < 300:
-            return entry["key"], entry["reset_day"]
-    notify_admins(f"All API keys for {service_name} are exhausted!")
-    return None, None
+    if not ENABLE_TELEGRAM:
+        logging.info("Telegram messaging is disabled in config")
+        return None
 
-def fetch_youtube_download_link(video_id):
-    """
-    Fetch the YouTube download link using the web service.
-    """
-    service_name = "youtube-mp3-2025.p.rapidapi.com"
-    retry_attempts = 3  # Retry up to 3 times if API keys are exhausted
-    for attempt in range(retry_attempts):
-        logging.info(f"Attempt {attempt + 1}/{retry_attempts}: Fetching API key for {service_name}.")
-        api_key, reset_day = get_available_key(service_name)
-        if not api_key:
-            logging.error(f"Attempt {attempt + 1}/{retry_attempts}: No available API keys for {service_name}.")
-            notify_admins(f"Attempt {attempt + 1}/{retry_attempts}: All API keys for {service_name} are exhausted!")
-            continue
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    if not token or not chat_id:
+        logging.error("Telegram credentials are not set in environment variables")
+        return None
 
-        conn = http.client.HTTPSConnection("youtube-mp3-2025.p.rapidapi.com")
-        headers = {
-            'x-rapidapi-key': api_key,
-            'x-rapidapi-host': service_name
-        }
+    message = f"\U0001F3B5 <b>{track_name}</b>\n"
+    message += f"\U0001F464 {artist_name}\n"
+    if album_name:
+        message += f"\U0001F4BF {album_name}\n"
+
+    # Search and download audio from YouTube
+    audio_path = search_and_download_youtube_mp3(track_name, artist_name, album_name)
+    if audio_path and os.path.exists(audio_path):
         try:
-            # Update the endpoint to the correct one
-            endpoint = f"/v1/social/youtube/audio?id={video_id}&ext=m4a&quality=128kbps"
-            logging.info(f"Attempt {attempt + 1}/{retry_attempts}: Sending request to fetch download link for video ID {video_id}.")
-            conn.request("GET", endpoint, headers=headers)
-            response = conn.getresponse()
-            data = response.read().decode("utf-8")
-            logging.debug(f"Response received: {data}")
-            result = json.loads(data)  # Safely parse JSON
+            # Convert .m4a to .mp3 if necessary
+            if audio_path.endswith(".m4a"):
+                logging.info(f"Converting {audio_path} to MP3 format.")
+                mp3_path = audio_path.replace(".m4a", ".mp3")
+                audio = AudioSegment.from_file(audio_path, format="m4a")
+                audio.export(mp3_path, format="mp3")
+                os.remove(audio_path)  # Remove the original .m4a file
+                audio_path = mp3_path
 
-            # Check for errors in the response
-            if result.get("error"):
-                logging.error(f"Error in API response: {result}")
-                notify_admins(f"Error fetching download link for video ID {video_id}: {result}")
-                return None
+            # Embed metadata
+            audio = MP3(audio_path, ID3=ID3)
+            try:
+                audio.add_tags()
+            except Exception:
+                pass
+            audio.tags.add(TIT2(encoding=3, text=track_name))
+            audio.tags.add(TPE1(encoding=3, text=artist_name))
+            if album_name:
+                audio.tags.add(TALB(encoding=3, text=album_name))
+            if album_image:
+                img_data = requests.get(album_image).content
+                audio.tags.add(APIC(
+                    encoding=3,
+                    mime='image/jpeg',
+                    type=3,
+                    desc='Cover',
+                    data=img_data
+                ))
+            audio.save()
 
-            # Extract the download link
-            download_link = result.get("linkDownload")
-            if not download_link:
-                logging.error(f"No download link found in the response for video ID {video_id}. Full response: {result}")
-                return None
-
-            logging.info(f"Download link fetched successfully for video ID {video_id}: {download_link}")
-            update_key_usage(service_name, api_key, reset_day)
-            return download_link
-        except json.JSONDecodeError as e:
-            logging.error(f"Error decoding JSON response: {e}")
+            # Send MP3 to Telegram
+            url = f'https://api.telegram.org/bot{token}/sendAudio'
+            with open(audio_path, 'rb') as audio_file:
+                files = {'audio': audio_file}
+                data = {'chat_id': chat_id, 'caption': message, 'parse_mode': 'HTML'}
+                logging.debug(f"Sending MP3 to Telegram chat {chat_id}")
+                response = requests.post(url, files=files, data=data)
+                response.raise_for_status()
+                logging.debug("MP3 sent successfully")
+                os.remove(audio_path)
+                return response.json()
         except Exception as e:
-            logging.error(f"Error fetching YouTube download link: {e}")
-            notify_admins(f"Unexpected error fetching download link for video ID {video_id}: {e}")
-    logging.error(f"All attempts to fetch the download link for video ID {video_id} failed.")
+            logging.error(f"Error sending MP3: {e}")
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+    else:
+        logging.error("Failed to download audio from YouTube.")
+
+    # Fallback: Send preview URL if available
+    if preview_url:
+        try:
+            logging.debug(f"Sending preview URL: {preview_url}")
+            result = send_message(f"{message}\n<a href='{preview_url}'>Preview</a>")
+            return result
+        except Exception as e:
+            logging.error(f"Error sending preview URL: {e}")
+
     return None
 
-def search_youtube_video(track_name, artist_name):
-    """
-    Search for a YouTube video and validate it.
-    """
-    query = f"{track_name} {artist_name} official audio"
-    search_url = f"https://www.googleapis.com/youtube/v3/search"
-    params = {
-        "part": "snippet",
-        "q": query,
-        "key": os.getenv("YOUTUBE_API_KEY"),
-        "type": "video",
-        "maxResults": 5
-    }
-    response = requests.get(search_url, params=params)
-    response.raise_for_status()
-    results = response.json().get("items", [])
-    for item in results:
-        title = item["snippet"]["title"].lower()
-        if any(keyword in title for keyword in ["live", "karaoke", "cover", "remix", "loop"]):
-            continue
-        return item["id"]["videoId"]
-    return None
+from google_translate import translate_to_persian
 
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
     """
@@ -182,62 +186,30 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
         response = requests.get(mp3_url, stream=True)
         if response.status_code == 200:
             file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
-            logging.info(f"Saving MP3 file to: {file_name}")
             with open(file_name, 'wb') as f:
                 for chunk in response.iter_content(1024):
                     f.write(chunk)
-            # Log file size for debugging
-            file_size = os.path.getsize(file_name)
-            logging.info(f"Downloaded file size: {file_size} bytes")
-            # Validate the MP3 file
-            if not is_valid_mp3(file_name):
-                logging.error(f"Downloaded file is not a valid MP3: {file_name}")
-                os.remove(file_name)
-                return None
-            logging.info(f"MP3 file downloaded and validated successfully: {file_name}")
             return file_name
         else:
-            logging.error(f"Failed to download MP3 file. HTTP status code: {response.status_code}. Response: {response.text}")
+            logging.error("Failed to download MP3 file")
             return None
     except Exception as e:
         logging.error(f"Error in search_and_download_youtube_mp3: {e}")
         return None
 
-def is_valid_mp3(file_path):
-    """
-    Validate if the given file is a valid MP3 file.
-    Args:
-        file_path (str): Path to the file to validate.
-    Returns:
-        bool: True if the file is a valid MP3, False otherwise.
-    """
-    try:
-        from mutagen.mp3 import MP3
-        MP3(file_path)  # Attempt to load the file as an MP3
-        return True
-    except Exception as e:
-        logging.error(f"File validation failed for {file_path}: {e}")
-        return False
-
 def notify_admins(message):
     """
     Notify admins via Telegram when an issue occurs.
     """
-    admin_chat_ids = os.getenv("ADMIN_CHAT_ID", "").split(",")
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not token or not admin_chat_ids:
-        logging.error("Telegram bot token or admin chat IDs are not set.")
+    admin_chat_ids = os.getenv('ADMIN_CHAT_ID', '')
+    if not admin_chat_ids:
+        logging.error("ADMIN_CHAT_ID is not set in environment variables")
         return
-
-    for admin_id in admin_chat_ids:
-        admin_id = admin_id.strip()
-        if not admin_id:
-            continue
-        payload = {'chat_id': admin_id, 'text': message, 'parse_mode': 'HTML'}
+    admin_ids = admin_chat_ids.split(",")
+    for admin_id in admin_ids:
+        payload = {'chat_id': admin_id.strip(), 'text': message, 'parse_mode': 'HTML'}
         try:
-            url = f'https://api.telegram.org/bot{token}/sendMessage'
-            response = requests.post(url, json=payload)
+            response = requests.post(f'https://api.telegram.org/bot{os.getenv("TELEGRAM_BOT_TOKEN")}/sendMessage', json=payload)
             response.raise_for_status()
-            logging.info(f"Notification sent to admin {admin_id}")
         except requests.exceptions.RequestException as e:
             logging.error(f"Failed to notify admin {admin_id}: {e}")
