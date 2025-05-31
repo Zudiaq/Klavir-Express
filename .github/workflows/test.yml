@@ -20,7 +20,7 @@ jobs:
           python -c "
 import requests
 
-url = 'https://example.com/audio.mp3'  # 🔗 لینک MP3 رو اینجا بذار
+url = 'https:\/\/alpha.123tokyo.xyz\/get.php\/e\/58\/41vY5Y0Cgio.mp3?n=Ma%CC%8Aneskin%20-%20Back%20To%20Black%20COVER%20%28Rooftop%20Sessions%29&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D&h=OHkSfGvTpAMf9HANT6_6gw&s=1748717977&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D' 
 
 try:
     response = requests.head(url, allow_redirects=True, timeout=10)
