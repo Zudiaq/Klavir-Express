@@ -36,10 +36,23 @@ def load_service_keys(service_name):
     Load API keys for the specified service from the YAML file.
     """
     if not os.path.exists(YAML_KEYS_FILE):
+        logging.info(f"YAML keys file not found. Pulling keys from GitHub.")
         pull_yaml_keys()
-    with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return data.get(service_name, [])
+    try:
+        with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        logging.debug(f"Loaded YAML data: {data}")  # Add this line for debugging
+        # Adjust for the actual key structure in the YAML file
+        service_keys = data.get(f"{service_name} keys", [])
+        if not service_keys:
+            logging.error(f"No keys found for service: {service_name}")
+        return service_keys
+    except yaml.YAMLError as e:
+        logging.error(f"Error parsing YAML file: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"Unexpected error loading service keys: {e}")
+        return []
 
 def update_key_usage(service_name, key, reset_day):
     """
