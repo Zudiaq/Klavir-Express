@@ -110,14 +110,19 @@ def fetch_youtube_download_link(video_id):
             data = response.read().decode("utf-8")
             logging.debug(f"Response received: {data}")
             result = json.loads(data)  # Safely parse JSON
+
+            # Check for errors in the response
             if result.get("error"):
-                logging.error(f"Error fetching download link: {result}")
+                logging.error(f"Error in API response: {result}")
                 notify_admins(f"Error fetching download link for video ID {video_id}: {result}")
                 return None
+
+            # Extract the download link
             download_link = result.get("linkDownload")
             if not download_link:
-                logging.error(f"No download link found in the response for video ID {video_id}.")
+                logging.error(f"No download link found in the response for video ID {video_id}. Full response: {result}")
                 return None
+
             logging.info(f"Download link fetched successfully for video ID {video_id}: {download_link}")
             update_key_usage(service_name, api_key, reset_day)
             return download_link
