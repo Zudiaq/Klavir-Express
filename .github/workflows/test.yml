@@ -1,0 +1,39 @@
+name: Check MP3 Link
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-mp3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Check MP3 Link
+        run: |
+          python -c "
+import requests
+
+url = 'https://example.com/audio.mp3'  # 🔗 لینک MP3 رو اینجا بذار
+
+try:
+    response = requests.head(url, allow_redirects=True, timeout=10)
+    status = response.status_code
+    content_type = response.headers.get('Content-Type', '')
+
+    if status == 200 and 'audio' in content_type:
+        print('✅ MP3 link is valid.')
+    else:
+        print(f'⚠️ Invalid link. Status: {status}, Content-Type: {content_type}')
+        exit(1)
+
+except Exception as e:
+    print(f'❌ Error: {e}')
+    exit(1)
+"
