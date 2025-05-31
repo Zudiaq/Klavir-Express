@@ -46,6 +46,7 @@ user_limit_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now() 
 user_warning_messages = defaultdict(dict)  # Store warning messages per user and media type
 user_command_counts = defaultdict(lambda: defaultdict(int))  # Track command usage per user
 user_command_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now()))  # Reset times for commands
+admin_last_message_ids = {}  # Track the last admin panel message ID per admin
 
 # ==========================
 # Helper Functions
@@ -361,11 +362,20 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
             return  # Do not process further if limit is exceeded
 
+    # Delete the previous admin panel message if it exists
+    if user_id in admin_last_message_ids:
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=admin_last_message_ids[user_id])
+        except Exception:
+            pass
+
+    # Delete the /admin command message
     try:
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     except Exception:
         pass
-    user_id = update.effective_user.id
+
+    # Check if the user is an admin
     if str(user_id) not in ADMIN_CHAT_IDS:
         error_message = await update.message.reply_text(t(user_id, "not_admin"))
         await asyncio.sleep(5)
@@ -374,6 +384,8 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
         return
+
+    # Create the admin panel
     keyboard = [
         [InlineKeyboardButton(t(user_id, "view_user_list"), callback_data="view_users")],
         [InlineKeyboardButton(t(user_id, "send_message_user"), callback_data="send_message_user")],
@@ -382,7 +394,13 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton(t(user_id, "remove_user"), callback_data="remove_user")],
         [InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")],
     ]
-    await update.message.reply_text(t(user_id, "welcome_admin_panel"), reply_markup=InlineKeyboardMarkup(keyboard))
+    admin_message = await update.message.reply_text(
+        t(user_id, "welcome_admin_panel"),
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+    # Store the message ID of the new admin panel
+    admin_last_message_ids[user_id] = admin_message.message_id
 
 # ==========================
 # Language Configuration
