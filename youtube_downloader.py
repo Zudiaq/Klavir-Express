@@ -98,14 +98,16 @@ def fetch_youtube_download_link(video_id):
             notify_admins(f"Attempt {attempt + 1}/{retry_attempts}: All API keys for {service_name} are exhausted!")
             continue
 
-        conn = http.client.HTTPSConnection("youtube-mp36.p.rapidapi.com")
+        conn = http.client.HTTPSConnection("youtube-mp3-2025.p.rapidapi.com")
         headers = {
             'x-rapidapi-key': api_key,
             'x-rapidapi-host': service_name
         }
         try:
+            # Update the endpoint to the correct one
+            endpoint = f"/v1/social/youtube/audio?id={video_id}&ext=m4a&quality=128kbps"
             logging.info(f"Attempt {attempt + 1}/{retry_attempts}: Sending request to fetch download link for video ID {video_id}.")
-            conn.request("GET", f"/dl?id={video_id}", headers=headers)
+            conn.request("GET", endpoint, headers=headers)
             response = conn.getresponse()
             data = response.read().decode("utf-8")
             logging.debug(f"Response received: {data}")
