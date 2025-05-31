@@ -125,7 +125,18 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
                     os.remove(audio_path)
                     return None
 
+            # Log file size after conversion
+            file_size = os.path.getsize(audio_path)
+            logging.info(f"Converted MP3 file size: {file_size} bytes")
+
+            # Validate the MP3 file
+            if not is_valid_mp3(audio_path):
+                logging.error(f"Converted file is not a valid MP3: {audio_path}")
+                os.remove(audio_path)
+                return None
+
             # Embed metadata
+            logging.info(f"Embedding metadata into MP3 file: {audio_path}")
             audio = MP3(audio_path, ID3=ID3)
             try:
                 audio.add_tags()
@@ -145,6 +156,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
                     data=img_data
                 ))
             audio.save()
+            logging.info(f"Metadata embedded successfully into MP3 file: {audio_path}")
 
             # Send MP3 to Telegram
             url = f'https://api.telegram.org/bot{token}/sendAudio'
@@ -154,7 +166,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
                 logging.debug(f"Sending MP3 to Telegram chat {chat_id}")
                 response = requests.post(url, files=files, data=data)
                 response.raise_for_status()
-                logging.debug("MP3 sent successfully")
+                logging.info("MP3 sent successfully to Telegram")
                 os.remove(audio_path)
                 return response.json()
         except Exception as e:
@@ -174,6 +186,24 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
             logging.error(f"Error sending preview URL: {e}")
 
     return None
+
+def is_valid_mp3(file_path):
+    """
+    Validate if the given file is a valid MP3 file.
+    Args:
+        file_path (str): Path to the file to validate.
+    Returns:
+        bool: True if the file is a valid MP3, False otherwise.
+    """
+    try:
+        logging.info(f"Validating MP3 file: {file_path}")
+        from mutagen.mp3 import MP3
+        mp3 = MP3(file_path)  # Attempt to load the file as an MP3
+        logging.info(f"MP3 validation successful: {file_path}")
+        return True
+    except Exception as e:
+        logging.error(f"MP3 validation failed for {file_path}: {e}")
+        return False
 
 from google_translate import translate_to_persian
 
