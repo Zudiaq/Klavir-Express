@@ -1,0 +1,26 @@
+name: Panel Restart
+
+on:
+  workflow_dispatch: # Allow manual start
+
+jobs:
+
+  restart:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: pip install requests python-telegram-bot
+
+      - name: Run restart script
+        run: |
+          echo "Starting the restart script..."
+          python restart_trigger.py
