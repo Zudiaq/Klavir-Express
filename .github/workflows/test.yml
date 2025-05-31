@@ -1,39 +1,18 @@
-name: Check MP3 Link
-
-on:
-  workflow_dispatch:
-
-jobs:
-  check-mp3:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install requests
-        run: pip install requests
-
-      - name: Check MP3 Link
-        run: |
-          python -c "
-          import requests
-
-          url = 'https://alpha.123tokyo.xyz/get.php/e/58/41vY5Y0Cgio.mp3?n=Måneskin%20-%20Back%20To%20Black%20COVER%20(Rooftop%20Sessions)&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D&h=OHkSfGvTpAMf9HANT6_6gw&s=1748717977' 
-
-          try:
-              response = requests.head(url, allow_redirects=True, timeout=10)
-              status = response.status_code
-              content_type = response.headers.get('Content-Type', '')
-
-              if status == 200 and 'audio' in content_type:
-                  print('✅ MP3 link is valid.')
-              else:
-                  print(f'⚠️ Invalid link. Status: {status}, Content-Type: {content_type}')
-                  exit(1)
-
-          except Exception as e:
-              print(f'❌ Error: {e}')
-              exit(1)
-          "
+- name: Test MP3 with headers
+  run: |
+    python -c "
+import requests
+headers = {
+  'User-Agent': 'Mozilla/5.0'
+}
+url = 'https://alpha.123tokyo.xyz/your-valid-link.mp3'
+r = requests.get(url, headers=headers, stream=True)
+print('Status:', r.status_code)
+print('Content-Type:', r.headers.get('Content-Type'))
+if r.ok:
+    print('✅ MP3 is accessible.')
+    exit(0)
+else:
+    print('❌ MP3 not accessible.')
+    exit(1)
+"
