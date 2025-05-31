@@ -8,6 +8,7 @@ import logging
 from dotenv import load_dotenv
 from config import DEBUG_MODE, ENABLE_TELEGRAM
 from pydub import AudioSegment
+from pydub.exceptions import CouldntDecodeError
 
 load_dotenv()
 
@@ -15,6 +16,9 @@ logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+# Explicitly set the ffmpeg path
+AudioSegment.converter = "ffmpeg"  # Replace with the full path to ffmpeg if necessary
 
 def send_message(message):
     """
@@ -106,10 +110,20 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
             if audio_path.endswith(".m4a"):
                 logging.info(f"Converting {audio_path} to MP3 format.")
                 mp3_path = audio_path.replace(".m4a", ".mp3")
-                audio = AudioSegment.from_file(audio_path, format="m4a")
-                audio.export(mp3_path, format="mp3")
-                os.remove(audio_path)  # Remove the original .m4a file
-                audio_path = mp3_path
+                try:
+                    audio = AudioSegment.from_file(audio_path, format="m4a")
+                    audio.export(mp3_path, format="mp3")
+                    os.remove(audio_path)  # Remove the original .m4a file
+                    audio_path = mp3_path
+                    logging.info(f"Conversion successful: {audio_path}")
+                except CouldntDecodeError as e:
+                    logging.error(f"Failed to decode .m4a file: {e}")
+                    os.remove(audio_path)
+                    return None
+                except Exception as e:
+                    logging.error(f"Error during conversion: {e}")
+                    os.remove(audio_path)
+                    return None
 
             # Embed metadata
             audio = MP3(audio_path, ID3=ID3)
