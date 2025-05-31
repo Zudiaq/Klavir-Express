@@ -159,48 +159,62 @@ def search_youtube_video(track_name, artist_name):
         return item["id"]["videoId"]
     return None
 
-def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, duration_limit=600):
+def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
     """
-    Search YouTube for the specified track and download as MP3, filtering out long videos (e.g., concerts).
-    Args:
-        track_name (str): Name of the track
-        artist_name (str): Name of the artist
-        album_name (str, optional): Name of the album
-        duration_limit (int): Maximum allowed duration in seconds (default 10 minutes)
-    Returns:
-        str: Path to the downloaded MP3 file, or None if not found
+    Search YouTube for the track and download the audio as MP3.
+    Returns the path to the downloaded MP3 file or None if failed.
     """
-    logging.info(f"Searching YouTube for track: {track_name} by artist: {artist_name}.")
-    video_id = search_youtube_video(track_name, artist_name)
-    if not video_id:
-        logging.error(f"No video found for track: {track_name} by artist: {artist_name}.")
-        return None
-    logging.info(f"Video found for track: {track_name} by artist: {artist_name}. Video ID: {video_id}.")
-
-    logging.info(f"Fetching download link for video ID: {video_id}.")
-    download_link = fetch_youtube_download_link(video_id)
-    if not download_link:
-        logging.error(f"Failed to fetch download link for video ID: {video_id}.")
-        return None
-    logging.info(f"Download link fetched successfully for video ID: {video_id}: {download_link}")
-
-    logging.info(f"Downloading MP3 file for track: {track_name} by artist: {artist_name}.")
     try:
-        response = requests.get(download_link, stream=True)
+        # Search for the video
+        query = f"{track_name} {artist_name}"
+        if album_name:
+            query += f" {album_name}"
+        video_url = search_youtube_video(query, artist_name)  # Pass artist_name explicitly
+        if not video_url:
+            logging.error("No YouTube video found for the query")
+            return None
+        # Get the download link
+        mp3_url = fetch_youtube_download_link(video_url)
+        if not mp3_url:
+            logging.error("Failed to fetch YouTube MP3 download link")
+            return None
+        # Download the MP3 file
+        response = requests.get(mp3_url, stream=True)
         if response.status_code == 200:
             file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
             logging.info(f"Saving MP3 file to: {file_name}")
-            with open(file_name, "wb") as f:
+            with open(file_name, 'wb') as f:
                 for chunk in response.iter_content(1024):
                     f.write(chunk)
-            logging.info(f"MP3 file downloaded successfully: {file_name}")
+            # Validate the MP3 file
+            if not is_valid_mp3(file_name):
+                logging.error(f"Downloaded file is not a valid MP3: {file_name}")
+                os.remove(file_name)
+                return None
+            logging.info(f"MP3 file downloaded and validated successfully: {file_name}")
             return file_name
         else:
             logging.error(f"Failed to download MP3 file. HTTP status code: {response.status_code}. Response: {response.text}")
             return None
     except Exception as e:
-        logging.error(f"Error downloading MP3 file: {e}")
+        logging.error(f"Error in search_and_download_youtube_mp3: {e}")
         return None
+
+def is_valid_mp3(file_path):
+    """
+    Validate if the given file is a valid MP3 file.
+    Args:
+        file_path (str): Path to the file to validate.
+    Returns:
+        bool: True if the file is a valid MP3, False otherwise.
+    """
+    try:
+        from mutagen.mp3 import MP3
+        MP3(file_path)  # Attempt to load the file as an MP3
+        return True
+    except Exception as e:
+        logging.error(f"File validation failed for {file_path}: {e}")
+        return False
 
 def notify_admins(message):
     """
