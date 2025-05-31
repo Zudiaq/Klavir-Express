@@ -54,13 +54,17 @@ def load_sent_songs():
     Returns a set of tuples (track_name, artist_name, album_name)
     """
     if not os.path.exists(SENT_SONGS_FILE):
+        with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f)
         return set()
     try:
         with open(SENT_SONGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
             return set(tuple(item) for item in data)
     except (json.JSONDecodeError, ValueError) as e:
-        logging.warning(f"Could not load sent songs file: {e}")
+        logging.warning(f"Could not load sent songs file: {e}. Reinitializing file.")
+        with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f)
         return set()
 
 
