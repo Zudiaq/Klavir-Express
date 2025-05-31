@@ -76,33 +76,40 @@ def fetch_youtube_download_link(video_id):
     Fetch the YouTube download link using the web service.
     """
     service_name = "youtube-mp3-2025.p.rapidapi.com"
-    api_key, reset_day = get_available_key(service_name)
-    if not api_key:
-        logging.error("No available API keys for YouTube MP3 service.")
-        notify_admins(f"All API keys for {service_name} are exhausted!")
-        return None
+    retry_attempts = 3  # Retry up to 3 times if API keys are exhausted
+    for attempt in range(retry_attempts):
+        logging.info(f"Attempt {attempt + 1}/{retry_attempts}: Fetching API key for {service_name}.")
+        api_key, reset_day = get_available_key(service_name)
+        if not api_key:
+            logging.error(f"Attempt {attempt + 1}/{retry_attempts}: No available API keys for {service_name}.")
+            notify_admins(f"Attempt {attempt + 1}/{retry_attempts}: All API keys for {service_name} are exhausted!")
+            continue
 
-    conn = http.client.HTTPSConnection("youtube-mp36.p.rapidapi.com")
-    headers = {
-        'x-rapidapi-key': api_key,
-        'x-rapidapi-host': service_name
-    }
-    try:
-        conn.request("GET", f"/dl?id={video_id}", headers=headers)
-        response = conn.getresponse()
-        data = response.read().decode("utf-8")
-        result = json.loads(data)  # Safely parse JSON
-        if result.get("error"):
-            logging.error(f"Error fetching download link: {result}")
-            notify_admins(f"Error fetching download link for video ID {video_id}: {result}")
-            return None
-        update_key_usage(service_name, api_key, reset_day)
-        return result.get("linkDownload")
-    except json.JSONDecodeError as e:
-        logging.error(f"Error decoding JSON response: {e}")
-    except Exception as e:
-        logging.error(f"Error fetching YouTube download link: {e}")
-        notify_admins(f"Unexpected error fetching download link for video ID {video_id}: {e}")
+        conn = http.client.HTTPSConnection("youtube-mp36.p.rapidapi.com")
+        headers = {
+            'x-rapidapi-key': api_key,
+            'x-rapidapi-host': service_name
+        }
+        try:
+            logging.info(f"Attempt {attempt + 1}/{retry_attempts}: Sending request to fetch download link for video ID {video_id}.")
+            conn.request("GET", f"/dl?id={video_id}", headers=headers)
+            response = conn.getresponse()
+            data = response.read().decode("utf-8")
+            logging.debug(f"Response received: {data}")
+            result = json.loads(data)  # Safely parse JSON
+            if result.get("error"):
+                logging.error(f"Error fetching download link: {result}")
+                notify_admins(f"Error fetching download link for video ID {video_id}: {result}")
+                return None
+            logging.info(f"Download link fetched successfully for video ID {video_id}.")
+            update_key_usage(service_name, api_key, reset_day)
+            return result.get("linkDownload")
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding JSON response: {e}")
+        except Exception as e:
+            logging.error(f"Error fetching YouTube download link: {e}")
+            notify_admins(f"Unexpected error fetching download link for video ID {video_id}: {e}")
+    logging.error(f"All attempts to fetch the download link for video ID {video_id} failed.")
     return None
 
 def search_youtube_video(track_name, artist_name):
@@ -139,17 +146,36 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     Returns:
         str: Path to the downloaded MP3 file, or None if not found
     """
+    logging.info(f"Searching YouTube for track: {track_name} by artist: {artist_name}.")
     video_id = search_youtube_video(track_name, artist_name)
     if not video_id:
+        logging.error(f"No video found for track: {track_name} by artist: {artist_name}.")
         return None
+    logging.info(f"Video found for track: {track_name} by artist: {artist_name}. Video ID: {video_id}.")
+
+    logging.info(f"Fetching download link for video ID: {video_id}.")
     download_link = fetch_youtube_download_link(video_id)
-    if download_link:
-        response = requests.get(download_link)
-        filename = f"{track_name} - {artist_name}.mp3"
-        with open(filename, "wb") as f:
-            f.write(response.content)
-        return os.path.abspath(filename)
-    return None
+    if not download_link:
+        logging.error(f"Failed to fetch download link for video ID: {video_id}.")
+        return None
+    logging.info(f"Download link fetched successfully for video ID: {video_id}.")
+
+    logging.info(f"Downloading MP3 file for track: {track_name} by artist: {artist_name}.")
+    try:
+        response = requests.get(download_link, stream=True)
+        if response.status_code == 200:
+            file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
+            with open(file_name, "wb") as f:
+                for chunk in response.iter_content(1024):
+                    f.write(chunk)
+            logging.info(f"MP3 file downloaded successfully: {file_name}.")
+            return file_name
+        else:
+            logging.error(f"Failed to download MP3 file. HTTP status code: {response.status_code}.")
+            return None
+    except Exception as e:
+        logging.error(f"Error downloading MP3 file: {e}")
+        return None
 
 def notify_admins(message):
     """
