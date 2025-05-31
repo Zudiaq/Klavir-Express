@@ -8,7 +8,7 @@ def trigger_panel_workflow():
     Triggers the 'panel.yml' workflow on GitHub.
     """
     github_token = os.getenv("GH_PAT")  # GitHub Personal Access Token
-    repo = "Zudiaq/Klavir-Express"  # Repository name (corrected)
+    repo = "Zudiaq/Klavir-Express"  # Repository name 
     workflow = "panel.yml"  # Workflow file name
 
     url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow}/dispatches"
@@ -26,14 +26,18 @@ def trigger_panel_workflow():
 
 def send_telegram_alert():
     """
-    Sends an alert to the admin via Telegram in case of failure.
+    Sends an alert to the admin(s) via Telegram in case of failure.
     """
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    admin_chat_id = os.getenv("ADMIN_CHAT_ID")
+    admin_chat_ids = os.getenv("ADMIN_CHAT_ID", "").split(",")  # Support multiple admin IDs
     bot = Bot(token=bot_token)
 
     message = "⚠️ Failed to trigger the 'panel.yml' workflow. Please check the system."
-    bot.send_message(chat_id=admin_chat_id, text=message)
+    for chat_id in admin_chat_ids:
+        try:
+            bot.send_message(chat_id=chat_id.strip(), text=message)
+        except Exception as e:
+            print(f"Failed to send alert to admin {chat_id}: {e}")
 
 if __name__ == "__main__":
     time.sleep(60)  # Wait for 1 minute before triggering
