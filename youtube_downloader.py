@@ -114,9 +114,13 @@ def fetch_youtube_download_link(video_id):
                 logging.error(f"Error fetching download link: {result}")
                 notify_admins(f"Error fetching download link for video ID {video_id}: {result}")
                 return None
-            logging.info(f"Download link fetched successfully for video ID {video_id}.")
+            download_link = result.get("linkDownload")
+            if not download_link:
+                logging.error(f"No download link found in the response for video ID {video_id}.")
+                return None
+            logging.info(f"Download link fetched successfully for video ID {video_id}: {download_link}")
             update_key_usage(service_name, api_key, reset_day)
-            return result.get("linkDownload")
+            return download_link
         except json.JSONDecodeError as e:
             logging.error(f"Error decoding JSON response: {e}")
         except Exception as e:
@@ -171,20 +175,21 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None, du
     if not download_link:
         logging.error(f"Failed to fetch download link for video ID: {video_id}.")
         return None
-    logging.info(f"Download link fetched successfully for video ID: {video_id}.")
+    logging.info(f"Download link fetched successfully for video ID: {video_id}: {download_link}")
 
     logging.info(f"Downloading MP3 file for track: {track_name} by artist: {artist_name}.")
     try:
         response = requests.get(download_link, stream=True)
         if response.status_code == 200:
             file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
+            logging.info(f"Saving MP3 file to: {file_name}")
             with open(file_name, "wb") as f:
                 for chunk in response.iter_content(1024):
                     f.write(chunk)
-            logging.info(f"MP3 file downloaded successfully: {file_name}.")
+            logging.info(f"MP3 file downloaded successfully: {file_name}")
             return file_name
         else:
-            logging.error(f"Failed to download MP3 file. HTTP status code: {response.status_code}.")
+            logging.error(f"Failed to download MP3 file. HTTP status code: {response.status_code}. Response: {response.text}")
             return None
     except Exception as e:
         logging.error(f"Error downloading MP3 file: {e}")
