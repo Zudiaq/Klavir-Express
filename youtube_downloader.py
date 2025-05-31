@@ -78,6 +78,8 @@ def fetch_youtube_download_link(video_id):
     service_name = "youtube-mp3-2025.p.rapidapi.com"
     api_key, reset_day = get_available_key(service_name)
     if not api_key:
+        logging.error("No available API keys for YouTube MP3 service.")
+        notify_admins(f"All API keys for {service_name} are exhausted!")
         return None
 
     conn = http.client.HTTPSConnection("youtube-mp36.p.rapidapi.com")
@@ -92,6 +94,7 @@ def fetch_youtube_download_link(video_id):
         result = json.loads(data)  # Safely parse JSON
         if result.get("error"):
             logging.error(f"Error fetching download link: {result}")
+            notify_admins(f"Error fetching download link for video ID {video_id}: {result}")
             return None
         update_key_usage(service_name, api_key, reset_day)
         return result.get("linkDownload")
@@ -99,6 +102,7 @@ def fetch_youtube_download_link(video_id):
         logging.error(f"Error decoding JSON response: {e}")
     except Exception as e:
         logging.error(f"Error fetching YouTube download link: {e}")
+        notify_admins(f"Unexpected error fetching download link for video ID {video_id}: {e}")
     return None
 
 def search_youtube_video(track_name, artist_name):
