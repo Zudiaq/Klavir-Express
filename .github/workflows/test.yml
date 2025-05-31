@@ -26,7 +26,7 @@ jobs:
             libgtk-4-1 \
             libgraphene-1.0-0 \
             libwoff1 \
-            libvpx6 \
+            libvpx5 \
             libevent-2.1-7 \
             libopus0 \
             libgstreamer1.0-0 \
@@ -34,13 +34,13 @@ jobs:
             libgstreamer-gl1.0-0 \
             libgstreamer-plugins-bad1.0-0 \
             libflite1 \
-            libavif13 \
+            libavif12 \
             libharfbuzz-icu0 \
             libsecret-1-0 \
             libhyphen0 \
             libmanette-0.2-0 \
-            libgles2-mesa \
-            libx264-160
+            libgles2 \
+            libx264
 
       - name: Install dependencies
         run: |
