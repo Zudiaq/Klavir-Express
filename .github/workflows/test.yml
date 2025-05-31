@@ -20,7 +20,7 @@ jobs:
           python -c "
           import requests
 
-          url = 'ttps://alpha.123tokyo.xyz/get.php/e/58/41vY5Y0Cgio.mp3?n=Måneskin%20-%20Back%20To%20Black%20COVER%20(Rooftop%20Sessions)&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D&h=OHkSfGvTpAMf9HANT6_6gw&s=1748717977' 
+          url = 'https://alpha.123tokyo.xyz/get.php/e/58/41vY5Y0Cgio.mp3?n=Måneskin%20-%20Back%20To%20Black%20COVER%20(Rooftop%20Sessions)&uT=R&uN=YW1pbm1vaGFtbWFkaTc3NQ%3D%3D&h=OHkSfGvTpAMf9HANT6_6gw&s=1748717977' 
 
           try:
               response = requests.head(url, allow_redirects=True, timeout=10)
