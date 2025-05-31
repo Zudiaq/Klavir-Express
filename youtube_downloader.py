@@ -186,6 +186,9 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
             with open(file_name, 'wb') as f:
                 for chunk in response.iter_content(1024):
                     f.write(chunk)
+            # Log file size for debugging
+            file_size = os.path.getsize(file_name)
+            logging.info(f"Downloaded file size: {file_size} bytes")
             # Validate the MP3 file
             if not is_valid_mp3(file_name):
                 logging.error(f"Downloaded file is not a valid MP3: {file_name}")
