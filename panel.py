@@ -8,7 +8,7 @@ import nest_asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta
 import sys
-import requests  # For triggering GitHub workflows
+import requests  
 
 # ==========================
 # Configuration Variables
@@ -37,6 +37,8 @@ LIMIT_DURATION_MINUTES = 30  # Duration of the limit in minutes
 user_message_counts = defaultdict(lambda: defaultdict(int))
 user_limit_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now() + timedelta(minutes=LIMIT_DURATION_MINUTES)))
 user_warning_messages = defaultdict(dict)  # Store warning messages per user and media type
+user_command_counts = defaultdict(lambda: defaultdict(int))  # Track command usage per user
+user_command_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now() + timedelta(days=1)))  # Reset times for commands
 
 # ==========================
 # Helper Functions
@@ -127,6 +129,26 @@ def save_users_and_languages():
 
 def get_user_language(user_id):
     return user_languages[user_id]
+
+async def check_command_limit(user_id: int, command: str) -> bool:
+    """
+    Check if the user has exceeded the daily limit for a specific command.
+    """
+    now = datetime.now()
+
+    # Reset command count if the reset time has passed
+    if now >= user_command_reset_times[user_id][command]:
+        user_command_counts[user_id][command] = 0
+        user_command_reset_times[user_id][command] = now + timedelta(days=1)
+
+    # Increment the command count
+    user_command_counts[user_id][command] += 1
+
+    # Check if the user has exceeded the limit
+    if user_command_counts[user_id][command] > 5:
+        return False  # Exceeded limit
+
+    return True  # Within limit
 
 # ==========================
 # Core Functions
@@ -276,6 +298,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
+
+    # Check command limit
+    if not await check_command_limit(user_id, "start"):
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+        except Exception:
+            pass
+        return  # Do not process further if limit is exceeded
+
+    # Check if user already exists in cached_users
+    if any(u["chat_id"] == user_id for u in cached_users):
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+        except Exception:
+            pass
+        return  # Do not send welcome message if user already exists
+
     user_data = {
         "chat_id": user.id,
         "username": user.username,
@@ -284,13 +323,54 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "language": user_languages[user_id],
     }
 
-    # Add user to cached_users if not already present
-    if not any(u["chat_id"] == user_data["chat_id"] for u in cached_users):
-        cached_users.append(user_data)
-        save_users_and_languages()
+    # Add user to cached_users
+    cached_users.append(user_data)
+    save_users_and_languages()
 
+    # Send welcome message
     await update.message.reply_text(t(user_id, "welcome_user", name=user.first_name))
     await context.bot.send_message(chat_id=ADMIN_CHAT_IDS[0], text=t(user_id, "start_admin_notify", user_data=yaml.dump(user_data)))
+
+    # Delete the /start message
+    try:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    # Check command limit for non-admin users
+    if str(user_id) not in ADMIN_CHAT_IDS:
+        if not await check_command_limit(user_id, "admin"):
+            try:
+                await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+            except Exception:
+                pass
+            return  # Do not process further if limit is exceeded
+
+    try:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+    except Exception:
+        pass
+    user_id = update.effective_user.id
+    if str(user_id) not in ADMIN_CHAT_IDS:
+        error_message = await update.message.reply_text(t(user_id, "not_admin"))
+        await asyncio.sleep(5)
+        try:
+            await context.bot.delete_message(chat_id=error_message.chat_id, message_id=error_message.message_id)
+        except Exception:
+            pass
+        return
+    keyboard = [
+        [InlineKeyboardButton(t(user_id, "view_user_list"), callback_data="view_users")],
+        [InlineKeyboardButton(t(user_id, "send_message_user"), callback_data="send_message_user")],
+        [InlineKeyboardButton(t(user_id, "send_message_all"), callback_data="send_message_all")],
+        [InlineKeyboardButton(t(user_id, "refresh_data"), callback_data="refresh_data")],
+        [InlineKeyboardButton(t(user_id, "remove_user"), callback_data="remove_user")],
+        [InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")],
+    ]
+    await update.message.reply_text(t(user_id, "welcome_admin_panel"), reply_markup=InlineKeyboardMarkup(keyboard))
 
 # ==========================
 # Language Configuration
@@ -510,30 +590,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.delete_message(chat_id=cancel_message.chat_id, message_id=cancel_message.message_id)
         except Exception:
             pass
-
-async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
-    except Exception:
-        pass
-    user_id = update.effective_user.id
-    if str(user_id) not in ADMIN_CHAT_IDS:
-        error_message = await update.message.reply_text(t(user_id, "not_admin"))
-        await asyncio.sleep(5)
-        try:
-            await context.bot.delete_message(chat_id=error_message.chat_id, message_id=error_message.message_id)
-        except Exception:
-            pass
-        return
-    keyboard = [
-        [InlineKeyboardButton(t(user_id, "view_user_list"), callback_data="view_users")],
-        [InlineKeyboardButton(t(user_id, "send_message_user"), callback_data="send_message_user")],
-        [InlineKeyboardButton(t(user_id, "send_message_all"), callback_data="send_message_all")],
-        [InlineKeyboardButton(t(user_id, "refresh_data"), callback_data="refresh_data")],
-        [InlineKeyboardButton(t(user_id, "remove_user"), callback_data="remove_user")],
-        [InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")],
-    ]
-    await update.message.reply_text(t(user_id, "welcome_admin_panel"), reply_markup=InlineKeyboardMarkup(keyboard))
 
 # ==========================
 # Restart Functions
