@@ -47,6 +47,8 @@ user_warning_messages = defaultdict(dict)  # Store warning messages per user and
 user_command_counts = defaultdict(lambda: defaultdict(int))  # Track command usage per user
 user_command_reset_times = defaultdict(lambda: defaultdict(lambda: datetime.now()))  # Reset times for commands
 admin_last_message_ids = {}  # Track the last admin panel message ID per admin
+cached_users = []  # Initialize cached_users
+user_languages = defaultdict(lambda: "en")  # Default to English
 
 # ==========================
 # Helper Functions
@@ -402,6 +404,29 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Store the message ID of the new admin panel
     admin_last_message_ids[user_id] = admin_message.message_id
 
+def update_admin_status():
+    """
+    Update the admin status of users in cached_users based on ADMIN_CHAT_IDS.
+    """
+    global cached_users
+    admin_ids = set(ADMIN_CHAT_IDS)  # Convert to set for faster lookup
+    for user in cached_users:
+        user["is_admin"] = str(user["chat_id"]) in admin_ids
+
+    # Add missing admins to cached_users
+    for admin_id in admin_ids:
+        if not any(user["chat_id"] == int(admin_id) for user in cached_users):
+            cached_users.append({
+                "chat_id": int(admin_id),
+                "username": None,
+                "first_name": "Admin",
+                "last_name": None,
+                "language": "en",
+                "is_admin": True,
+            })
+
+    save_users_and_languages()
+
 # ==========================
 # Language Configuration
 # ==========================
@@ -510,14 +535,17 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "view_users":
         sync_repo()
+        update_admin_status()  # Ensure admin status is updated
         file_path = os.path.join("repo", USER_DATA_FILE)
         with open(file_path, "r") as file:
             users = yaml.safe_load(file) or []
-        if users:
+        # Filter out admins from the user list
+        non_admin_users = [user for user in users if not user.get("is_admin", False)]
+        if non_admin_users:
             user_list = "\n".join(
                 [f"👤 <b>{user['first_name']} {user.get('last_name', '')}</b>\n"
                  f"🔗 Username: @{user['username'] or 'N/A'}\n"
-                 f"🆔 Chat ID: <code>{user['chat_id']}</code>\n" for user in users]
+                 f"🆔 Chat ID: <code>{user['chat_id']}</code>\n" for user in non_admin_users]
             )
         else:
             user_list = t(user_id, "no_users_found")
@@ -575,12 +603,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "remove_user":
         sync_repo()
+        update_admin_status()  # Ensure admin status is updated
         file_path = os.path.join("repo", USER_DATA_FILE)
         with open(file_path, "r") as file:
             users = yaml.safe_load(file) or []
+        # Filter out admins from the removable user list
+        removable_users = [user for user in users if not user.get("is_admin", False)]
         keyboard = [
             [InlineKeyboardButton(f"{user['first_name']} (@{user['username']})", callback_data=f"remove_{user['chat_id']}")]
-            for user in users
+            for user in removable_users
         ]
         keyboard.append([InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")])
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -589,22 +620,29 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith("remove_"):
         chat_id = int(query.data.split("_")[1])
         sync_repo()
+        update_admin_status()  # Ensure admin status is updated
         file_path = os.path.join("repo", USER_DATA_FILE)
         with open(file_path, "r") as file:
             users = yaml.safe_load(file) or []
+        # Prevent removing admins
+        if any(user["chat_id"] == chat_id and user.get("is_admin", False) for user in users):
+            await send_temporary_message(context, update.effective_chat.id, "❌ You cannot remove an admin.")
+            return
         updated_users = [user for user in users if user["chat_id"] != chat_id]
         with open(file_path, "w") as file:
             yaml.dump(updated_users, file)
         push_changes()
         await send_temporary_message(context, update.effective_chat.id, t(user_id, "user_removed", chat_id=chat_id))
+        # Refresh the user list
         sync_repo()
         with open(file_path, "r") as file:
             refreshed_users = yaml.safe_load(file) or []
-        if refreshed_users:
+        non_admin_users = [user for user in refreshed_users if not user.get("is_admin", False)]
+        if non_admin_users:
             user_list = "\n".join(
                 [f"👤 <b>{user['first_name']} {user.get('last_name', '')}</b>\n"
                  f"🔗 Username: @{user['username'] or 'N/A'}\n"
-                 f"🆔 Chat ID: <code>{user['chat_id']}</code>\n" for user in refreshed_users]
+                 f"🆔 Chat ID: <code>{user['chat_id']}</code>\n" for user in non_admin_users]
             )
         else:
             user_list = t(user_id, "no_users_found")
@@ -670,6 +708,7 @@ async def trigger_restart_workflow():
 # ==========================
 async def main():
     load_users_and_languages()  # Load users and languages from YAML file
+    update_admin_status()  # Ensure admin status is updated at startup
 
     application = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
     application.add_handler(CommandHandler("start", start))
