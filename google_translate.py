@@ -8,8 +8,9 @@ def translate_to_persian(text):
     Returns:
         str: Translated text in Persian, or None if translation fails.
     """
+    TRANSLATE_TO_LANGUAGE = "fa"  # Persian
     try:
-        translator = Translator(to_lang="fa")
+        translator = Translator(to_lang=TRANSLATE_TO_LANGUAGE)
         result = translator.translate(text)
         # Remove unwanted characters like numbers and hashtags
         result = ''.join(filter(lambda x: not x.isdigit() and x not in ['#', '&', ';'], result))
