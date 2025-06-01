@@ -22,6 +22,13 @@ logging.basicConfig(
 # Explicitly set the ffmpeg path
 AudioSegment.converter = "ffmpeg"  # Replace with the full path to ffmpeg if necessary
 
+def append_channel_id(message):
+    """
+    Append the channel ID to the message with a blank line.
+    """
+    channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
+    return f"{message}\n\n{channel_id}"
+
 def send_message(message):
     """
     Send a text message to the configured Telegram chat.
@@ -39,7 +46,7 @@ def send_message(message):
         logging.error("Telegram credentials are not set in environment variables")
         return None
     url = f'https://api.telegram.org/bot{token}/sendMessage'
-    payload = {'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'}
+    payload = {'chat_id': chat_id, 'text': append_channel_id(message), 'parse_mode': 'HTML'}
     try:
         logging.debug(f"Sending message to Telegram chat {chat_id}")
         response = requests.post(url, json=payload)
@@ -71,7 +78,7 @@ def send_audio_with_caption(audio_path, caption):
     try:
         with open(audio_path, 'rb') as audio_file:
             files = {'audio': audio_file}
-            data = {'chat_id': chat_id, 'caption': caption, 'parse_mode': 'HTML'}
+            data = {'chat_id': chat_id, 'caption': append_channel_id(caption), 'parse_mode': 'HTML'}
             logging.debug(f"Sending audio to Telegram chat {chat_id}")
             response = requests.post(url, files=files, data=data)
             response.raise_for_status()
@@ -87,18 +94,12 @@ def send_audio_with_caption(audio_path, caption):
 def format_mp3_filename(track_name, artist_name, album_name=None):
     """
     Format the MP3 file name to include track name, artist name, and album name in a clean format.
-    Args:
-        track_name (str): Name of the track.
-        artist_name (str): Name of the artist.
-        album_name (str, optional): Name of the album.
-    Returns:
-        str: Formatted MP3 file name.
     """
     if album_name:
-        file_name = f"{track_name} - {artist_name} ({album_name})"
+        file_name = f"{track_name} - {artist_name} ({album_name}).mp3"
     else:
-        file_name = f"{track_name} - {artist_name}"
-    return file_name.replace(" ", "_").replace("/", "-") + ".mp3"
+        file_name = f"{track_name} - {artist_name}.mp3"
+    return file_name.replace(" ", "_").replace("/", "-").strip()
 
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
@@ -181,35 +182,19 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
             logging.info(f"Metadata embedded successfully into MP3 file: {audio_path}")
 
             # Send MP3 to Telegram
-            url = f'https://api.telegram.org/bot{token}/sendAudio'
-            with open(audio_path, 'rb') as audio_file:
-                files = {'audio': audio_file}
-                data = {'chat_id': chat_id, 'caption': message, 'parse_mode': 'HTML'}
-                logging.debug(f"Sending MP3 to Telegram chat {chat_id}")
-                response = requests.post(url, files=files, data=data)
-                response.raise_for_status()
-                logging.info("MP3 sent successfully to Telegram")
-                os.remove(audio_path)
-                return response.json()
+            return send_audio_with_caption(audio_path, message)
         except Exception as e:
             logging.error(f"Error sending MP3: {e}")
             if os.path.exists(audio_path):
                 os.remove(audio_path)
     else:
         logging.error("Failed to download audio from YouTube.")
-        fallback_message = (
-            f"Could not find a YouTube video for the query: {track_name} {artist_name}. "
-            f"Please try searching manually."
-        )
-        send_message(fallback_message)
-        return None
 
     # Fallback: Send preview URL if available
     if preview_url:
         try:
             logging.debug(f"Sending preview URL: {preview_url}")
-            result = send_message(f"{message}\n<a href='{preview_url}'>Preview</a>")
-            return result
+            return send_message(f"{message}\n<a href='{preview_url}'>Preview</a>")
         except Exception as e:
             logging.error(f"Error sending preview URL: {e}")
 
@@ -225,15 +210,12 @@ def is_valid_mp3(file_path):
     """
     try:
         logging.info(f"Validating MP3 file: {file_path}")
-        from mutagen.mp3 import MP3
-        mp3 = MP3(file_path)  # Attempt to load the file as an MP3
+        MP3(file_path)  # Attempt to load the file as an MP3
         logging.info(f"MP3 validation successful: {file_path}")
         return True
     except Exception as e:
         logging.error(f"MP3 validation failed for {file_path}: {e}")
         return False
-
-from google_translate import translate_to_persian
 
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
     """
