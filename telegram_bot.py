@@ -155,6 +155,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
             # Validate the MP3 file
             if not is_valid_mp3(audio_path):
                 logging.error(f"Converted file is not a valid MP3: {audio_path}")
+                notify_admins(f"Failed to validate MP3 file for track '{track_name}' by '{artist_name}'.")
                 os.remove(audio_path)
                 return None
 
