@@ -40,6 +40,9 @@ def send_weather_update():
         result = send_message(weather_message)
         if result and "message_id" in result:
             message_id = result["message_id"]
+            # Clear and update the weather_msg_id.txt file with the new message_id
+            with open(WEATHER_MSG_FILE, "w") as f:
+                f.write(str(message_id))
             save_weather_message_id_to_github(str(message_id))
             logging.info(f"Weather message sent successfully with ID: {message_id}")
         else:
