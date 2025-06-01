@@ -16,7 +16,7 @@ SPOTIFY_PLAYLIST_URL = "https://open.spotify.com/playlist/5cqqGsaya5ito8lAtWE9Ar
 
 GH_PAT = os.getenv('GH_PAT')  # GitHub Personal Access Token
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
-SENT_SONGS_FILE = "sent_songs.yaml"
+SENT_SONGS_FILE = "Zudiaq/sent_songs.yaml"
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
