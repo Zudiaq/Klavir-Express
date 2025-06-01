@@ -1,12 +1,17 @@
+# ==========================
+# Weather API Integration
+# ==========================
 import os
 import requests
 import logging
 from dotenv import load_dotenv
-from config import CITY, REGION, DEBUG_MODE
 
 load_dotenv()
 
 API_KEY = os.getenv("OPENWEATHERMAP_API_KEY")
+CITY = os.getenv("CITY", "Tehran")
+REGION = os.getenv("REGION", "IR")
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
@@ -30,28 +35,17 @@ def get_weather():
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        weather_main = data['weather'][0]['main']
-        weather_desc = data['weather'][0]['description']
-        temp = data['main']['temp']
-        humidity = data['main']['humidity']
-        wind_speed = data['wind']['speed']
         weather_data = {
-            'main': weather_main,
-            'description': weather_desc,
-            'temp': temp,
-            'humidity': humidity,
-            'wind_speed': wind_speed,
+            'main': data['weather'][0]['main'],
+            'description': data['weather'][0]['description'],
+            'temp': data['main']['temp'],
+            'humidity': data['main']['humidity'],
+            'wind_speed': data['wind']['speed'],
             'pressure': data['main'].get('pressure'),
             'visibility': data.get('visibility')
         }
         logging.debug(f"Weather data retrieved successfully: {weather_data}")
         return weather_data
-    except requests.exceptions.HTTPError as http_err:
-        logging.error(f"HTTP error occurred: {http_err}")
-    except requests.exceptions.ConnectionError as conn_err:
-        logging.error(f"Connection error occurred: {conn_err}")
-    except requests.exceptions.Timeout as timeout_err:
-        logging.error(f"Timeout error occurred: {timeout_err}")
     except requests.exceptions.RequestException as req_err:
         logging.error(f"Request error occurred: {req_err}")
     except Exception as e:
