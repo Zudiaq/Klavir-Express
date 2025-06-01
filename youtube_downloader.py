@@ -272,6 +272,12 @@ def search_youtube_video(query, artist_name):
                 return video_id
 
         logging.warning("No suitable video found in search results.")
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 403:
+            logging.error("YouTube API returned 403 Forbidden. Check your API key or quota.")
+            notify_admins("YouTube API returned 403 Forbidden. Please check the API key or quota.")
+        else:
+            logging.error(f"HTTP error during YouTube search: {e}")
     except requests.exceptions.RequestException as e:
         logging.error(f"Error during YouTube search: {e}")
     except Exception as e:
