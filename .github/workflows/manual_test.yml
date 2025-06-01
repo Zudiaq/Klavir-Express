@@ -63,7 +63,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Update weather message
-        run: python send_weather.py update
+        run: python update_weather.py update
 
   send_music:
     runs-on: ubuntu-latest
