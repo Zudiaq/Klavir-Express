@@ -1,11 +1,10 @@
-name: Scheduled Workflow
+name: Scheduled Tasks
 
 on:
-      workflow_dispatch:
-#  schedule:
-#    - cron: '30 8 * * *' # Run at 8:30 AM daily
-#    - cron: '30 9-23/1 * * *' # Update weather every hour from 9:30 AM to 11:30 PM
-#   - cron: '30 8-23/2 * * *' # Send music every 1.5 hours starting at 8:30 AM
+  schedule:
+    - cron: '30 8 * * *' # Run at 8:30 AM daily
+    - cron: '30 9-23/1 * * *' # Update weather every hour from 9:30 AM to 11:30 PM
+    - cron: '30 8-23/2 * * *' # Send music every 1.5 hours starting at 8:30 AM
 
 jobs:
   morning_tasks:
@@ -63,7 +62,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Update weather message
-        run: python send_weather.py
+        run: python send_weather.py update
 
   send_music:
     runs-on: ubuntu-latest
