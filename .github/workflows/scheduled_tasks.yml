@@ -1,11 +1,10 @@
 name: Scheduled Tasks
 
 on:
-  workflow_dispatch:
-#  schedule:
-#    - cron: '30 8 * * *' # Run at 8:30 AM daily
-#    - cron: '30 9-23/1 * * *' # Update weather every hour from 9:30 AM to 11:30 PM
-#    - cron: '30 8-23/2 * * *' # Send music every 1.5 hours starting at 8:30 AM
+  schedule:
+    - cron: '30 8 * * *' # Run at 8:30 AM daily
+    - cron: '30 9-23/1 * * *' # Update weather every hour from 9:30 AM to 11:30 PM
+    - cron: '30 8-23/2 * * *' # Send music every 1.5 hours starting at 8:30 AM
 
 jobs:
   morning_tasks:
@@ -15,6 +14,7 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
+      GH_PAT: ${{ secrets.GH_PAT }}
       CITY: ${{ vars.CITY }}
       REGION: ${{ vars.REGION }}
       DEBUG_MODE: ${{ vars.DEBUG_MODE }}
@@ -45,6 +45,7 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
+      GH_PAT: ${{ secrets.GH_PAT }}
       CITY: ${{ vars.CITY }}
       REGION: ${{ vars.REGION }}
       DEBUG_MODE: ${{ vars.DEBUG_MODE }}
