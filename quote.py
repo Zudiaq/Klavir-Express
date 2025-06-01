@@ -4,11 +4,13 @@ import logging
 from dotenv import load_dotenv
 from mood import map_weather_to_mood
 from weather import get_weather
-from config import DEBUG_MODE
 
 load_dotenv()
 
 ZENQUOTE_API_URL = "https://zenquotes.io/api/random"
+
+# Set DEBUG_MODE from environment variable or default to False
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() in ("true", "1", "yes")
 
 # Set up logging
 logging.basicConfig(
