@@ -9,7 +9,7 @@ on:
 
 jobs:
   morning_tasks:
-    if: github.event.schedule == '30 8 * * *'
+#    if: github.event.schedule == '30 8 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -32,7 +32,7 @@ jobs:
         run: python send_quote.py
 
   update_weather:
-    if: github.event.schedule == '30 9-23/1 * * *'
+#    if: github.event.schedule == '30 9-23/1 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,7 +52,7 @@ jobs:
         run: python update_weather.py
 
   send_music:
-    if: github.event.schedule == '30 8-23/2 * * *'
+#    if: github.event.schedule == '30 8-23/2 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
