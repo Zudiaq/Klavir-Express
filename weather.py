@@ -1,6 +1,3 @@
-# ==========================
-# Weather API Integration
-# ==========================
 import os
 import requests
 import logging
