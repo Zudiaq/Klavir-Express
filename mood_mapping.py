@@ -4,26 +4,8 @@
 import random
 import logging
 
-# Load genres from the playlist file
-def load_playlist_genres(file_path):
-    """
-    Load genres from the playlist file and return a list of unique genres.
-    """
-    genres = set()
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                if ':' in line:
-                    genre = line.split(':')[1].strip()
-                    genres.add(genre)
-    except FileNotFoundError:
-        print(f"Playlist file not found: {file_path}")
-    return list(genres)
-
-PLAYLIST_GENRES = load_playlist_genres("c:\\Users\\Zodiac\\Desktop\\Klavir - Alpha\\Destination, Infinity.txt")
-if not PLAYLIST_GENRES:
-    logging.warning("No genres loaded from the playlist file. Falling back to default genres.")
-    PLAYLIST_GENRES = ["pop", "rock", "indie", "hip-hop", "jazz"]  # Default fallback genres
+# Default fallback genres
+PLAYLIST_GENRES = ["pop", "rock", "indie", "hip-hop", "jazz"]
 
 # Define mood mapping with diverse genres
 MOOD_MAPPING = {
