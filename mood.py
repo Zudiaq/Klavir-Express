@@ -26,7 +26,7 @@ def determine_season(month):
     elif month in [9, 10, 11]: return 'autumn'
     else: return 'winter'
 
-def map_weather_to_mood_enhanced(weather_data): 
+def map_weather_to_mood(weather_data): 
     if not weather_data:
         logging.warning("No weather data provided, defaulting to 'neutral_calm'")
         return "neutral_calm"
