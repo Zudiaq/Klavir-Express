@@ -1,10 +1,10 @@
 import requests
 import os
 import logging
-from dotenv import load_dotenv
-from mood_mapping import get_spotify_recommendations_params
 import base64
 import yaml
+from dotenv import load_dotenv
+from mood_mapping import get_spotify_recommendations_params
 
 load_dotenv()
 
