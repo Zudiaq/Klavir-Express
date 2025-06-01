@@ -18,7 +18,11 @@ def save_weather_message_id_to_github(message_id):
     Save the weather message ID to the private GitHub repository.
     """
     try:
-        push_file_to_github(WEATHER_MSG_FILE, message_id, "Update weather message ID")
+        with open(WEATHER_MSG_FILE, "w", encoding="utf-8") as f:
+            f.write(str(message_id))
+        with open(WEATHER_MSG_FILE, "r", encoding="utf-8") as f:
+            content = f.read()
+        push_file_to_github(WEATHER_MSG_FILE, content, "Update weather message ID")
         logging.info(f"Weather message ID saved to GitHub: {message_id}")
     except Exception as e:
         logging.error(f"Failed to save weather message ID to GitHub: {e}")
@@ -38,12 +42,9 @@ def send_weather_update():
             f"\U0001F4DC Description: {weather['description']}"
         )
         result = send_message(weather_message)
-        if result and "message_id" in result:
-            message_id = result["message_id"]
-            # Clear and update the weather_msg_id.txt file with the new message_id
-            with open(WEATHER_MSG_FILE, "w") as f:
-                f.write(str(message_id))
-            save_weather_message_id_to_github(str(message_id))
+        if result and "result" in result and "message_id" in result["result"]:
+            message_id = result["result"]["message_id"]
+            save_weather_message_id_to_github(message_id)
             logging.info(f"Weather message sent successfully with ID: {message_id}")
         else:
             logging.error(f"Failed to send weather message. Response: {result}")
