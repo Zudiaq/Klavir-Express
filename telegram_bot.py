@@ -84,6 +84,21 @@ def send_audio_with_caption(audio_path, caption):
         logging.error(f"Error sending audio: {e}")
         return None
 
+def format_mp3_filename(track_name, artist_name, album_name=None):
+    """
+    Format the MP3 file name to include track name, artist name, and album name.
+    Args:
+        track_name (str): Name of the track.
+        artist_name (str): Name of the artist.
+        album_name (str, optional): Name of the album.
+    Returns:
+        str: Formatted MP3 file name.
+    """
+    file_name = f"{track_name} - {artist_name}"
+    if album_name:
+        file_name += f" - {album_name}"
+    return file_name.replace(" ", "_").replace("/", "-") + ".mp3"
+
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
     Send a music recommendation to Telegram with available metadata.
@@ -107,6 +122,10 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     # Search and download audio from YouTube
     audio_path = search_and_download_youtube_mp3(track_name, artist_name, album_name)
     if audio_path and os.path.exists(audio_path):
+        formatted_name = format_mp3_filename(track_name, artist_name, album_name)
+        os.rename(audio_path, formatted_name)
+        audio_path = formatted_name
+
         try:
             # Convert .m4a to .mp3 if necessary
             if audio_path.endswith(".m4a"):
