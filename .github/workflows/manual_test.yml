@@ -78,6 +78,8 @@ jobs:
       LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
       API_SELECTION: ${{ vars.API_SELECTION }}
       GH_PAT: ${{ secrets.GH_PAT }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
       DEBUG_MODE: ${{ vars.DEBUG_MODE }}
       CITY: ${{ vars.CITY }}
       REGION: ${{ vars.REGION }}
