@@ -1,11 +1,9 @@
 import logging
 import os
 from weather import get_weather
-from telegram_bot import edit_message
-from spotify import pull_sent_songs
+from telegram_bot import send_message
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
-GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
 WEATHER_MSG_FILE = "weather_msg_id.txt"
 
 logging.basicConfig(
@@ -13,49 +11,40 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-def pull_weather_message_id_from_github():
+def save_weather_message_id_to_github(message_id):
     """
-    Pull the weather message ID from the private GitHub repository.
+    Save the weather message ID locally (no longer pushed to GitHub).
     """
     try:
-        pull_sent_songs()  # Reuse the pull function to fetch the file
-        if os.path.exists(WEATHER_MSG_FILE):
-            with open(WEATHER_MSG_FILE, "r", encoding="utf-8") as f:
-                message_id = f.read().strip()
-                logging.info(f"Weather message ID pulled from GitHub: {message_id}")
-                return message_id
-        else:
-            logging.error(f"{WEATHER_MSG_FILE} does not exist.")
-            return None
+        with open(WEATHER_MSG_FILE, "w", encoding="utf-8") as f:
+            f.write(str(message_id))
+        logging.info(f"Weather message ID saved locally: {message_id}")
     except Exception as e:
-        logging.error(f"Failed to pull weather message ID from GitHub: {e}")
-        return None
+        logging.error(f"Failed to save weather message ID locally: {e}")
 
-def update_weather_message():
+def send_weather_update():
     """
-    Update the previously sent weather message with the latest weather data.
+    Retrieve the current weather and send a formatted update via Telegram.
     """
-    logging.info("Updating weather message...")
+    logging.info("Sending weather update...")
     weather = get_weather()
     if weather:
         weather_message = (
-            f"\U0001F324 <b>Weather Update</b>\n"
-            f"\U0001F321 Temperature: {weather['temp']}°C\n"
+            f"\U0001F324 <b>Weather</b>\n"
+            f"\U0001F321 Temperature: {weather['temp']}\u00B0C\n"
             f"\U0001F4A7 Humidity: {weather['humidity']}%\n"
             f"\U0001F32C Wind Speed: {weather['wind_speed']} m/s\n"
             f"\U0001F4DC Description: {weather['description']}"
         )
-        message_id = pull_weather_message_id_from_github()
-        if message_id:
-            result = edit_message(message_id, weather_message)
-            if result:
-                logging.info("Weather message updated successfully.")
-            else:
-                logging.error("Failed to update weather message.")
+        result = send_message(weather_message)
+        if result and "result" in result and "message_id" in result["result"]:
+            message_id = result["result"]["message_id"]
+            save_weather_message_id_to_github(message_id)
+            logging.info(f"Weather message sent successfully with ID: {message_id}")
         else:
-            logging.error("No weather message ID found. Cannot update.")
+            logging.error(f"Failed to send weather message. Response: {result}")
     else:
         logging.error("Failed to retrieve weather data.")
 
 if __name__ == "__main__":
-    update_weather_message()
+    send_weather_update()
