@@ -2,35 +2,26 @@ import logging
 import os
 from weather import get_weather
 from telegram_bot import send_message
+from spotify import push_file_to_github
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
+WEATHER_MSG_FILE = "weather_msg_id.txt"
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-def update_environment_variable(key, value):
+def save_weather_message_id_to_github(message_id):
     """
-    Update an environment variable in the Deployment 1 environment.
+    Save the weather message ID to the private GitHub repository.
     """
-    env_file = "/github/workspace/.env"  # Path to the environment file
     try:
-        with open(env_file, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        with open(env_file, "w", encoding="utf-8") as f:
-            updated = False
-            for line in lines:
-                if line.startswith(f"{key}="):
-                    f.write(f"{key}={value}\n")
-                    updated = True
-                else:
-                    f.write(line)
-            if not updated:
-                f.write(f"{key}={value}\n")
-        logging.info(f"Updated environment variable: {key}={value}")
+        push_file_to_github(WEATHER_MSG_FILE, message_id, "Update weather message ID")
+        logging.info(f"Weather message ID saved to GitHub: {message_id}")
     except Exception as e:
-        logging.error(f"Failed to update environment variable {key}: {e}")
+        logging.error(f"Failed to save weather message ID to GitHub: {e}")
 
 def send_weather_update():
     """
@@ -49,7 +40,7 @@ def send_weather_update():
         result = send_message(weather_message)
         if result and "message_id" in result:
             message_id = result["message_id"]
-            update_environment_variable("WEATHER_MESSAGE_ID", message_id)
+            save_weather_message_id_to_github(str(message_id))
             logging.info(f"Weather message sent successfully with ID: {message_id}")
         else:
             logging.error(f"Failed to send weather message. Response: {result}")
