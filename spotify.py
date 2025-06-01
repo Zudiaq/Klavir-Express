@@ -3,7 +3,6 @@ import os
 import logging
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
-from config import DEBUG_MODE, SPOTIFY_PLAYLIST_URL
 import json
 
 load_dotenv()
@@ -11,6 +10,9 @@ load_dotenv()
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_API_URL = "https://api.spotify.com/v1/"
+SPOTIFY_PLAYLIST_URL = "https://open.spotify.com/playlist/5cqqGsaya5ito8lAtWE9Ar?si=e1f74c32e34149a3"
+
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
 # Set up logging
 logging.basicConfig(
