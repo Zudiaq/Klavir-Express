@@ -267,3 +267,37 @@ def notify_admins(message):
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             logging.error(f"Failed to notify admin {admin_id}: {e}")
+
+def edit_message(message_id, new_text):
+    """
+    Edit a previously sent message in the configured Telegram chat.
+    Args:
+        message_id (int): The ID of the message to edit.
+        new_text (str): The new text for the message.
+    Returns:
+        dict: Telegram API response or None if error.
+    """
+    if not ENABLE_TELEGRAM:
+        logging.info("Telegram messaging is disabled in config")
+        return None
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    if not token or not chat_id:
+        logging.error("Telegram credentials are not set in environment variables")
+        return None
+    url = f'https://api.telegram.org/bot{token}/editMessageText'
+    payload = {
+        'chat_id': chat_id,
+        'message_id': message_id,
+        'text': append_channel_id(new_text),
+        'parse_mode': 'HTML'
+    }
+    try:
+        logging.debug(f"Editing message {message_id} in Telegram chat {chat_id}")
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        logging.debug("Message edited successfully")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error editing message: {e}")
+        return None
