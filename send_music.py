@@ -19,33 +19,42 @@ def process_music_recommendation():
     """
     Process and send a music recommendation based on current weather and mood.
     Chooses the music API (Spotify or Last.fm) and sends the recommendation to Telegram.
+    Retries with alternative queries or fallback songs if the first attempt fails.
     """
     logging.info("Processing music recommendation...")
     weather = get_weather()
     if weather:
         mood = map_weather_to_mood(weather)
         music_api = os.getenv('API_SELECTION', 'spotify')
-        if music_api.lower() == 'spotify':
-            song = get_song_by_mood_spotify(mood)
-        else:
-            song = get_song_by_mood(mood)
-        if song:
-            track_name, artist_name, album_name, album_image, preview_url = song
-            result = send_to_telegram(
-                track_name, artist_name, album_name, album_image, preview_url, mood
-            )
-            if result:
-                logging.info("Music recommendation sent successfully.")
+        max_retries = 3  # Number of retries for alternative queries or fallback songs
+
+        for attempt in range(max_retries):
+            logging.info(f"Attempt {attempt + 1} for mood: {mood}")
+            if music_api.lower() == 'spotify':
+                song = get_song_by_mood_spotify(mood)
             else:
-                logging.error("Failed to send music recommendation.")
-            # Save the song to sent_songs.json
-            try:
-                save_sent_song(track_name, artist_name, album_name)
-            except Exception as e:
-                logging.error(f"Error saving sent song: {e}")
-        else:
-            logging.error("Failed to retrieve song.")
-            notify_admins("Failed to retrieve a song recommendation. Possible API key exhaustion.")
+                song = get_song_by_mood(mood)
+
+            if song:
+                track_name, artist_name, album_name, album_image, preview_url = song
+                result = send_to_telegram(
+                    track_name, artist_name, album_name, album_image, preview_url, mood
+                )
+                if result:
+                    logging.info("Music recommendation sent successfully.")
+                    try:
+                        save_sent_song(track_name, artist_name, album_name)
+                    except Exception as e:
+                        logging.error(f"Error saving sent song: {e}")
+                    return  # Exit after successful recommendation
+                else:
+                    logging.error("Failed to send music recommendation.")
+            else:
+                logging.warning("No song found. Retrying with a different query or fallback.")
+
+        # Notify admins if all attempts fail
+        logging.error("Failed to retrieve or send a music recommendation after multiple attempts.")
+        notify_admins("Failed to retrieve or send a music recommendation. Possible API key exhaustion or no suitable songs found.")
     else:
         logging.error("Failed to retrieve weather data.")
         notify_admins("Failed to retrieve weather data. Please check the weather API.")
