@@ -55,21 +55,37 @@ def update_key_usage(service_name, key, reset_day):
     """
     Update the usage count of an API key and handle daily reset logic.
     """
-    with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    keys = data.get(service_name, [])
-    today = datetime.now().day
-    for entry in keys:
-        if entry["key"] == key:
-            if today == reset_day and entry.get("last_reset") != str(datetime.now().date()):
-                entry["usage"] = 1
-                entry["last_reset"] = str(datetime.now().date())
-                logging.info(f"Usage reset for key: {key}")
-            else:
-                entry["usage"] += 1
-            break
-    with open(YAML_KEYS_FILE, "w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f)
+    if not os.path.exists(YAML_KEYS_FILE):
+        logging.error(f"YAML keys file not found: {YAML_KEYS_FILE}")
+        return
+
+    try:
+        with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        keys = data.get(f"{service_name} keys", [])
+        today = datetime.now().day
+        for entry in keys:
+            if entry["key"] == key:
+                # Reset usage if it's the reset day and hasn't been reset today
+                if today == reset_day and entry.get("last_reset") != str(datetime.now().date()):
+                    entry["usage"] = 1
+                    entry["last_reset"] = str(datetime.now().date())
+                    logging.info(f"Usage reset for key: {key}")
+                else:
+                    # Increment usage
+                    entry["usage"] += 1
+                break
+        else:
+            logging.warning(f"Key {key} not found in the YAML file for service {service_name}.")
+
+        # Save the updated YAML file
+        with open(YAML_KEYS_FILE, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f)
+        logging.info(f"Updated usage for key: {key}")
+    except yaml.YAMLError as e:
+        logging.error(f"Error parsing YAML file: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error updating key usage: {e}")
 
 def get_available_key(service_name):
     """
