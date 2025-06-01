@@ -1,10 +1,13 @@
 import logging
+import os
 from send_weather import send_weather_update
 from send_quote import send_quote_message
 from send_music import process_music_recommendation
 
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
