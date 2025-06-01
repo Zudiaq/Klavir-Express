@@ -1,15 +1,16 @@
-import logging
 import os
+import logging
 from mood import map_weather_to_mood
 from weather import get_weather
 from spotify import get_song_by_mood_spotify
 from lastfm import get_song_by_mood
 from telegram_bot import send_music_recommendation as send_to_telegram
-from config import DEFAULT_MUSIC_API
 from telegram_bot import notify_admins
 
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
@@ -22,7 +23,7 @@ def process_music_recommendation():
     weather = get_weather()
     if weather:
         mood = map_weather_to_mood(weather)
-        music_api = os.getenv('API_SELECTION', DEFAULT_MUSIC_API)
+        music_api = os.getenv('API_SELECTION', 'spotify')
         if music_api.lower() == 'spotify':
             song = get_song_by_mood_spotify(mood)
         else:
