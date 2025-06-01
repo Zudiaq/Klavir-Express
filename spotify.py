@@ -76,7 +76,7 @@ def pull_sent_songs():
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
             yaml.dump([], f)  # Initialize an empty file if pull fails
 
-def push_file_to_github(file_path, content, commit_message):
+def push_file_to_github(file_path, content, commit_message, gh_pat):
     """
     Push a file to the private GitHub repository.
     
@@ -84,10 +84,11 @@ def push_file_to_github(file_path, content, commit_message):
         file_path (str): Path to the file in the repository.
         content (str): Content to write to the file.
         commit_message (str): Commit message for the update.
+        gh_pat (str): GitHub Personal Access Token for authentication.
     """
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
     headers = {
-        "Authorization": f"token {GH_PAT}",
+        "Authorization": f"token {gh_pat}",
         "Content-Type": "application/json"
     }
     try:
