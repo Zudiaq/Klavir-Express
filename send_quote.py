@@ -1,10 +1,13 @@
 import logging
+import os
 from quote import get_quote
 from google_translate import translate_to_persian
 from telegram_bot import send_message
 
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
