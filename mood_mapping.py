@@ -2,6 +2,7 @@
 # Mood Mapping Dataset
 # ==========================
 import random
+import logging
 
 # Load genres from the playlist file
 def load_playlist_genres(file_path):
@@ -20,6 +21,9 @@ def load_playlist_genres(file_path):
     return list(genres)
 
 PLAYLIST_GENRES = load_playlist_genres("c:\\Users\\Zodiac\\Desktop\\Klavir - Alpha\\Destination, Infinity.txt")
+if not PLAYLIST_GENRES:
+    logging.warning("No genres loaded from the playlist file. Falling back to default genres.")
+    PLAYLIST_GENRES = ["pop", "rock", "indie", "hip-hop", "jazz"]  # Default fallback genres
 
 # Define mood mapping with diverse genres
 MOOD_MAPPING = {
