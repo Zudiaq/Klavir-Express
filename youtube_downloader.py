@@ -43,7 +43,7 @@ def load_service_keys(service_name):
     try:
         with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
-        return data.get(service_name, [])
+        return data.get(f"{service_name} keys", [])
     except yaml.YAMLError as e:
         logging.error(f"Error parsing YAML file: {e}")
         return []
