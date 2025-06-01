@@ -86,7 +86,7 @@ def send_audio_with_caption(audio_path, caption):
 
 def format_mp3_filename(track_name, artist_name, album_name=None):
     """
-    Format the MP3 file name to include track name, artist name, and album name.
+    Format the MP3 file name to include track name, artist name, and album name in a clean format.
     Args:
         track_name (str): Name of the track.
         artist_name (str): Name of the artist.
@@ -94,9 +94,10 @@ def format_mp3_filename(track_name, artist_name, album_name=None):
     Returns:
         str: Formatted MP3 file name.
     """
-    file_name = f"{track_name} - {artist_name}"
     if album_name:
-        file_name += f" - {album_name}"
+        file_name = f"{track_name} - {artist_name} ({album_name})"
+    else:
+        file_name = f"{track_name} - {artist_name}"
     return file_name.replace(" ", "_").replace("/", "-") + ".mp3"
 
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
