@@ -2,7 +2,7 @@ import logging
 import os
 from weather import get_weather
 from telegram_bot import edit_message
-from spotify import pull_sent_songs, push_file_to_github
+from spotify import pull_sent_songs
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
@@ -31,18 +31,6 @@ def pull_weather_message_id_from_github():
         logging.error(f"Failed to pull weather message ID from GitHub: {e}")
         return None
 
-def push_weather_message_id_to_github(message_id):
-    """
-    Push the updated weather message ID back to the private GitHub repository.
-    """
-    try:
-        with open(WEATHER_MSG_FILE, "w", encoding="utf-8") as f:
-            f.write(message_id)
-        push_file_to_github(WEATHER_MSG_FILE, message_id, "Update weather message ID")
-        logging.info(f"Weather message ID pushed to GitHub: {message_id}")
-    except Exception as e:
-        logging.error(f"Failed to push weather message ID to GitHub: {e}")
-
 def update_weather_message():
     """
     Update the previously sent weather message with the latest weather data.
@@ -62,7 +50,6 @@ def update_weather_message():
             result = edit_message(message_id, weather_message)
             if result:
                 logging.info("Weather message updated successfully.")
-                push_weather_message_id_to_github(message_id)
             else:
                 logging.error("Failed to update weather message.")
         else:
