@@ -1,6 +1,7 @@
 import logging
 import os
 import json
+from datetime import datetime
 from weather import get_weather
 from telegram_bot import send_message, edit_message
 
@@ -14,19 +15,24 @@ logging.basicConfig(
 
 def save_weather_message_id(message_id):
     """
-    Save the weather message ID to a file for later updates.
+    Save the weather message ID and the current date to a file for later updates.
     """
+    data = {
+        "message_id": message_id,
+        "date": datetime.now().strftime("%Y-%m-%d")
+    }
     with open(WEATHER_MESSAGE_FILE, "w", encoding="utf-8") as f:
-        json.dump({"message_id": message_id}, f)
+        json.dump(data, f)
 
 def load_weather_message_id():
     """
-    Load the weather message ID from the file.
+    Load the weather message ID from the file if it corresponds to the current date.
     """
     if os.path.exists(WEATHER_MESSAGE_FILE):
         with open(WEATHER_MESSAGE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get("message_id")
+            if data.get("date") == datetime.now().strftime("%Y-%m-%d"):
+                return data.get("message_id")
     return None
 
 def send_weather_update():
@@ -74,7 +80,7 @@ def update_weather_message():
             else:
                 logging.error("Failed to update weather message.")
         else:
-            logging.error("No weather message ID found. Cannot update.")
+            logging.error("No weather message ID found for today. Cannot update.")
     else:
         logging.error("Failed to retrieve weather data.")
 
