@@ -3,7 +3,6 @@ import os
 import logging
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
-import json
 import base64
 import yaml
 
@@ -16,7 +15,7 @@ SPOTIFY_PLAYLIST_URL = "https://open.spotify.com/playlist/5cqqGsaya5ito8lAtWE9Ar
 
 GH_PAT = os.getenv('GH_PAT')  # GitHub Personal Access Token
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
-SENT_SONGS_FILE = "Zudiaq/sent_songs.yaml"
+SENT_SONGS_FILE = "sent_songs.yaml"  # Corrected file path
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
@@ -65,8 +64,15 @@ def pull_sent_songs():
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
             f.write(response.text)
         logging.info("Successfully pulled sent_songs.yaml from GitHub.")
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            logging.warning(f"{SENT_SONGS_FILE} not found in the repository. Initializing a new file.")
+            with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
+                yaml.dump([], f)  # Initialize an empty file
+        else:
+            logging.error(f"Failed to pull {SENT_SONGS_FILE}: {e}")
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to pull sent_songs.yaml: {e}")
+        logging.error(f"Failed to pull {SENT_SONGS_FILE}: {e}")
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
             yaml.dump([], f)  # Initialize an empty file if pull fails
 
