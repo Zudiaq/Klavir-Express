@@ -1,13 +1,34 @@
 import logging
+import os
+import json
+from datetime import datetime
 from weather import get_weather
-from telegram_bot import send_message
+from telegram_bot import edit_message
 
-logging.basicConfig(level=logging.INFO)
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+WEATHER_MESSAGE_FILE = "weather_message.json"
+
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+def load_weather_message_id():
+    """
+    Load the weather message ID from the file if it corresponds to the current date.
+    """
+    if os.path.exists(WEATHER_MESSAGE_FILE):
+        with open(WEATHER_MESSAGE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if data.get("date") == datetime.now().strftime("%Y-%m-%d"):
+                return data.get("message_id")
+    return None
 
 def update_weather_message():
     """
-    Update the weather message in the Telegram channel.
+    Update the previously sent weather message with the latest weather data.
     """
+    logging.info("Updating weather message...")
     weather = get_weather()
     if weather:
         weather_message = (
@@ -17,7 +38,15 @@ def update_weather_message():
             f"\U0001F32C Wind Speed: {weather['wind_speed']} m/s\n"
             f"\U0001F4DC Description: {weather['description']}"
         )
-        send_message(weather_message)
+        message_id = load_weather_message_id()
+        if message_id:
+            result = edit_message(message_id, weather_message)
+            if result:
+                logging.info("Weather message updated successfully.")
+            else:
+                logging.error("Failed to update weather message.")
+        else:
+            logging.error("No weather message ID found for today. Cannot update.")
     else:
         logging.error("Failed to retrieve weather data.")
 
