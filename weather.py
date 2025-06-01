@@ -29,7 +29,7 @@ def get_weather():
     if not API_KEY:
         logging.error("OPENWEATHERMAP_API_KEY is not set in environment variables.")
         return None
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={CITY},{REGION}&appid={API_KEY}&units=metric&lang=fa"
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={CITY},{REGION}&appid={API_KEY}&units=metric&lang=en"
     try:
         logging.debug(f"Fetching weather data for {CITY}, {REGION}")
         response = requests.get(url, timeout=10)
