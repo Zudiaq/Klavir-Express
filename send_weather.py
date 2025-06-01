@@ -3,7 +3,7 @@ import os
 import json
 from datetime import datetime
 from weather import get_weather
-from telegram_bot import send_message, edit_message
+from telegram_bot import send_message
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 WEATHER_MESSAGE_FILE = "weather_message.json"
@@ -55,32 +55,6 @@ def send_weather_update():
             logging.info(f"Weather message sent successfully with ID: {result['message_id']}")
         else:
             logging.error(f"Failed to send weather message. Response: {result}")
-    else:
-        logging.error("Failed to retrieve weather data.")
-
-def update_weather_message():
-    """
-    Update the previously sent weather message with the latest weather data.
-    """
-    logging.info("Updating weather message...")
-    weather = get_weather()
-    if weather:
-        weather_message = (
-            f"\U0001F324 <b>Weather</b>\n"
-            f"\U0001F321 Temperature: {weather['temp']}\u00B0C\n"
-            f"\U0001F4A7 Humidity: {weather['humidity']}%\n"
-            f"\U0001F32C Wind Speed: {weather['wind_speed']} m/s\n"
-            f"\U0001F4DC Description: {weather['description']}"
-        )
-        message_id = load_weather_message_id()
-        if message_id:
-            result = edit_message(message_id, weather_message)
-            if result:
-                logging.info("Weather message updated successfully.")
-            else:
-                logging.error("Failed to update weather message.")
-        else:
-            logging.error("No weather message ID found for today. Cannot update.")
     else:
         logging.error("Failed to retrieve weather data.")
 
