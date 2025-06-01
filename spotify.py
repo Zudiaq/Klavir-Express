@@ -4,7 +4,8 @@ import logging
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 import json
-import base64  # Add this import for encoding
+import base64  
+import yaml
 
 load_dotenv()
 
@@ -15,7 +16,7 @@ SPOTIFY_PLAYLIST_URL = "https://open.spotify.com/playlist/5cqqGsaya5ito8lAtWE9Ar
 
 GH_PAT = os.getenv('GH_PAT')  # GitHub Personal Access Token
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
-SENT_SONGS_FILE = "sent_songs.json"
+SENT_SONGS_FILE = "sent_songs.yaml"
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
@@ -54,7 +55,7 @@ def get_spotify_token():
 
 def pull_sent_songs():
     """
-    Pull the sent_songs.json file from the private GitHub repository.
+    Pull the sent_songs.yaml file from the private GitHub repository.
     """
     url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{SENT_SONGS_FILE}"
     headers = {"Authorization": f"token {GH_PAT}"}
@@ -63,15 +64,15 @@ def pull_sent_songs():
         response.raise_for_status()
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
             f.write(response.text)
-        logging.info("Successfully pulled sent_songs.json from GitHub.")
+        logging.info("Successfully pulled sent_songs.yaml from GitHub.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to pull sent_songs.json: {e}")
+        logging.error(f"Failed to pull sent_songs.yaml: {e}")
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f)  # Initialize an empty file if pull fails
+            yaml.dump([], f)  # Initialize an empty file if pull fails
 
 def push_sent_songs():
     """
-    Push the updated sent_songs.json file back to the private GitHub repository.
+    Push the updated sent_songs.yaml file back to the private GitHub repository.
     """
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{SENT_SONGS_FILE}"
     headers = {
@@ -91,46 +92,45 @@ def push_sent_songs():
 
         # Push the updated file
         payload = {
-            "message": "Update sent_songs.json",
+            "message": "Update sent_songs.yaml",
             "content": encoded_content,
             "sha": sha
         }
         response = requests.put(url, headers=headers, json=payload)
         response.raise_for_status()
-        logging.info("Successfully pushed sent_songs.json to GitHub.")
+        logging.info("Successfully pushed sent_songs.yaml to GitHub.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to push sent_songs.json: {e}")
+        logging.error(f"Failed to push sent_songs.yaml: {e}")
 
 def load_sent_songs():
     """
-    Load the list of sent songs from the JSON file.
+    Load the list of sent songs from the YAML file.
     Returns a set of tuples (track_name, artist_name, album_name)
     """
     pull_sent_songs()  # Ensure the latest file is pulled
     if not os.path.exists(SENT_SONGS_FILE):
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f)
+            yaml.dump([], f)
         return set()
     try:
         with open(SENT_SONGS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return set(tuple(item) for item in data)
-    except (json.JSONDecodeError, ValueError) as e:
+            data = yaml.safe_load(f)
+            return set(tuple(item.values()) for item in data)
+    except (yaml.YAMLError, ValueError) as e:
         logging.warning(f"Could not load sent songs file: {e}. Reinitializing file.")
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f)
+            yaml.dump([], f)
         return set()
-
 
 def save_sent_song(track_name, artist_name, album_name):
     """
-    Save a new sent song to the JSON file and push it to GitHub.
+    Save a new sent song to the YAML file and push it to GitHub.
     """
     sent_songs = load_sent_songs()
     sent_songs.add((track_name, artist_name, album_name))
     try:
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(list(sent_songs), f, ensure_ascii=False, indent=2)
+            yaml.dump([{"track_name": t, "artist_name": a, "album_name": al} for t, a, al in sent_songs], f)
         push_sent_songs()  # Push the updated file to GitHub
     except Exception as e:
         logging.warning(f"Could not save sent song: {e}")
