@@ -1,28 +1,14 @@
 import logging
 import os
-import json
-from datetime import datetime
 from weather import get_weather
 from telegram_bot import edit_message
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
-WEATHER_MESSAGE_FILE = "weather_message.json"
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-
-def load_weather_message_id():
-    """
-    Load the weather message ID from the file if it corresponds to the current date.
-    """
-    if os.path.exists(WEATHER_MESSAGE_FILE):
-        with open(WEATHER_MESSAGE_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if data.get("date") == datetime.now().strftime("%Y-%m-%d"):
-                return data.get("message_id")
-    return None
 
 def update_weather_message():
     """
@@ -38,7 +24,7 @@ def update_weather_message():
             f"\U0001F32C Wind Speed: {weather['wind_speed']} m/s\n"
             f"\U0001F4DC Description: {weather['description']}"
         )
-        message_id = load_weather_message_id()
+        message_id = os.getenv("WEATHER_MESSAGE_ID")
         if message_id:
             result = edit_message(message_id, weather_message)
             if result:
@@ -46,7 +32,7 @@ def update_weather_message():
             else:
                 logging.error("Failed to update weather message.")
         else:
-            logging.error("No weather message ID found for today. Cannot update.")
+            logging.error("No WEATHER_MESSAGE_ID found in environment. Cannot update.")
     else:
         logging.error("Failed to retrieve weather data.")
 
