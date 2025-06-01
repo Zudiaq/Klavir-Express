@@ -83,30 +83,9 @@ def save_sent_song(track_name, artist_name, album_name):
         logging.warning(f"Could not save sent song: {e}")
 
 
-def load_playlist_genres(file_path):
-    """
-    Load genres from the playlist file and return a list of unique genres.
-    """
-    if not os.path.exists(file_path):
-        logging.error(f"Playlist file not found: {file_path}")
-        return []
-    genres = set()
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                if ':' in line:
-                    genre = line.split(':')[1].strip()
-                    genres.add(genre)
-    except Exception as e:
-        logging.error(f"Error loading playlist file: {e}")
-    return list(genres)
-
-# Update playlist genres loading
-PLAYLIST_GENRES = load_playlist_genres("c:\\Users\\Zodiac\\Desktop\\Klavir - Alpha\\Destination, Infinity.txt")
-
 def get_song_by_mood_spotify(mood):
     """
-    Get song recommendations based on mood using Spotify's recommendation API or a specific playlist if configured
+    Get song recommendations based on mood using Spotify's recommendation API or a specific playlist if configured.
     """
     token = get_spotify_token()
     if not token:
@@ -117,16 +96,15 @@ def get_song_by_mood_spotify(mood):
     }
     sent_songs = load_sent_songs()
     max_attempts = 10
-    # If a playlist is specified in config, use it
+
+    # If a playlist URL is provided, fetch songs from the playlist
     if SPOTIFY_PLAYLIST_URL:
-        # Extract playlist ID from URL or use as is if it's just an ID
         import re
         playlist_id = None
         match = re.search(r'playlist[\/:]?([a-zA-Z0-9]+)', str(SPOTIFY_PLAYLIST_URL))
         if match:
             playlist_id = match.group(1)
         else:
-            # Try to use the value directly
             playlist_id = str(SPOTIFY_PLAYLIST_URL)
         playlist_url = f"{SPOTIFY_API_URL}playlists/{playlist_id}/tracks"
         try:
@@ -136,41 +114,29 @@ def get_song_by_mood_spotify(mood):
             if not playlist_data or 'items' not in playlist_data:
                 logging.error("Invalid playlist data received.")
                 return None
-            if 'items' in playlist_data and playlist_data['items']:
-                # Filter tracks by mood mapping genres if possible
-                mood_params = get_spotify_recommendations_params(mood)
-                mood_genres = set(mood_params.get('seed_genres', '').split(','))
-                valid_tracks = []
-                for item in playlist_data['items']:
-                    track = item.get('track')
-                    if not track:
-                        continue
-                    # Try to match at least one genre if available (Spotify API does not provide genres for tracks directly)
-                    # So we fallback to matching by track name, artist, or just random selection
-                    valid_tracks.append(track)
-                import random
-                attempts = 0
-                while attempts < max_attempts and valid_tracks:
-                    track = random.choice(valid_tracks)
-                    track_name = track.get('name')
-                    artist_name = track['artists'][0]['name'] if track.get('artists') else None
-                    album_name = track['album']['name'] if track.get('album') else None
-                    album_image = track['album']['images'][0]['url'] if track.get('album') and track['album'].get('images') else None
-                    preview_url = track.get('preview_url')
-                    song_key = (track_name, artist_name, album_name)
-                    if song_key not in sent_songs:
-                        save_sent_song(track_name, artist_name, album_name)
-                        return track_name, artist_name, album_name, album_image, preview_url
-                    attempts += 1
-                logging.error("Could not find a unique song from the playlist after several attempts.")
-                return None
-            else:
-                logging.warning("No items found in playlist data.")
-                return None
+            valid_tracks = [item['track'] for item in playlist_data['items'] if item.get('track')]
+            import random
+            attempts = 0
+            while attempts < max_attempts and valid_tracks:
+                track = random.choice(valid_tracks)
+                track_name = track.get('name')
+                artist_name = track['artists'][0]['name'] if track.get('artists') else None
+                album_name = track['album']['name'] if track.get('album') else None
+                album_image = track['album']['images'][0]['url'] if track.get('album') and track['album'].get('images') else None
+                preview_url = track.get('preview_url')
+                song_key = (track_name, artist_name, album_name)
+                if song_key not in sent_songs:
+                    save_sent_song(track_name, artist_name, album_name)
+                    return track_name, artist_name, album_name, album_image, preview_url
+                attempts += 1
+            logging.error("Could not find a unique song from the playlist after several attempts.")
+            return None
         except Exception as e:
             logging.error(f"Error retrieving tracks from playlist: {e}")
             return None
-    # Otherwise, use the global Spotify search logic
+
+    # If no playlist URL is provided, search Spotify globally
+    logging.info("No playlist URL provided. Searching Spotify globally.")
     for _ in range(max_attempts):
         result = direct_search(mood, headers)
         if not result:
@@ -185,10 +151,6 @@ def get_song_by_mood_spotify(mood):
     logging.error("Could not find a unique song after several attempts.")
     return None
     
-    # Skip recommendations and go straight to search as it's more reliable
-    logging.info(f"Using direct search for mood: {mood}")
-    return direct_search(mood, headers)
-
 
 def direct_search(mood, headers):
     """
