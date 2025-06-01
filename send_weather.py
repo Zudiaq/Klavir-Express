@@ -7,6 +7,7 @@ from spotify import push_file_to_github
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
 WEATHER_MSG_FILE = "weather_msg_id.txt"
+GH_PAT = os.getenv("GH_PAT")
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
@@ -22,7 +23,7 @@ def save_weather_message_id_to_github(message_id):
             f.write(str(message_id))
         with open(WEATHER_MSG_FILE, "r", encoding="utf-8") as f:
             content = f.read()
-        push_file_to_github(WEATHER_MSG_FILE, content, "Update weather message ID")
+        push_file_to_github(WEATHER_MSG_FILE, content, "Update weather message ID", GH_PAT)
         logging.info(f"Weather message ID saved to GitHub: {message_id}")
     except Exception as e:
         logging.error(f"Failed to save weather message ID to GitHub: {e}")
