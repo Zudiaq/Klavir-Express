@@ -104,7 +104,6 @@ def format_mp3_filename(track_name, artist_name, album_name=None):
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
     Send a music recommendation to Telegram with available metadata.
-    Downloads the audio from YouTube, converts it to MP3, embeds metadata, and sends the MP3 file.
     """
     if not ENABLE_TELEGRAM:
         logging.info("Telegram messaging is disabled in config")
@@ -121,6 +120,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     if album_name:
         message += f"\U0001F4BF {album_name}\n"
 
+    logging.info(f"Sending music recommendation: {message}")
     # Search and download audio from YouTube
     audio_path = search_and_download_youtube_mp3(track_name, artist_name, album_name)
     if audio_path and os.path.exists(audio_path):
