@@ -6,11 +6,13 @@ import requests
 import os
 import logging
 from dotenv import load_dotenv
-from config import DEBUG_MODE, ENABLE_TELEGRAM
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
 
 load_dotenv()
+
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+ENABLE_TELEGRAM = os.getenv("ENABLE_TELEGRAM", "True").lower() == "true"
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
