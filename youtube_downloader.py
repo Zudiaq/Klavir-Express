@@ -245,41 +245,45 @@ def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
 def search_youtube_video(query, artist_name):
     """
     Search for a YouTube video and validate it.
+    Retries with alternative queries if the initial search fails.
     """
     search_url = f"https://www.googleapis.com/youtube/v3/search"
     params = {
         "part": "snippet",
-        "q": query,
         "key": os.getenv("YOUTUBE_API_KEY"),
         "type": "video",
         "maxResults": 5
     }
-    try:
-        logging.info(f"Searching YouTube for query: {query}")
-        response = requests.get(search_url, params=params)
-        response.raise_for_status()
-        results = response.json().get("items", [])
-        logging.debug(f"Search results: {results}")
+    alternative_queries = [
+        query,
+        f"{artist_name} {query.split()[0]}",  # Artist name + first word of the query
+        artist_name  # Only the artist name
+    ]
 
-        for item in results:
-            title = item["snippet"]["title"].lower()
-            video_id = item["id"]["videoId"]
-            logging.debug(f"Checking video: {title} (ID: {video_id})")
-            if artist_name.lower() in title and not any(
-                keyword in title for keyword in ["live", "karaoke", "cover", "remix", "loop"]
-            ):
-                logging.info(f"Found matching video: {title} (ID: {video_id})")
-                return video_id
+    for alt_query in alternative_queries:
+        params["q"] = alt_query
+        try:
+            logging.info(f"Searching YouTube for query: {alt_query}")
+            response = requests.get(search_url, params=params)
+            response.raise_for_status()
+            results = response.json().get("items", [])
+            logging.debug(f"Search results for query '{alt_query}': {results}")
 
-        logging.warning("No suitable video found in search results.")
-    except requests.exceptions.HTTPError as e:
-        if response.status_code == 403:
-            logging.error("YouTube API returned 403 Forbidden. Check your API key or quota.")
-            notify_admins("YouTube API returned 403 Forbidden. Please check the API key or quota.")
-        else:
-            logging.error(f"HTTP error during YouTube search: {e}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error during YouTube search: {e}")
-    except Exception as e:
-        logging.error(f"Unexpected error during YouTube search: {e}")
+            for item in results:
+                title = item["snippet"]["title"].lower()
+                video_id = item["id"]["videoId"]
+                logging.debug(f"Checking video: {title} (ID: {video_id})")
+                if artist_name.lower() in title and not any(
+                    keyword in title for keyword in ["live", "karaoke", "cover", "remix", "loop"]
+                ):
+                    logging.info(f"Found matching video: {title} (ID: {video_id})")
+                    return video_id
+
+            logging.warning(f"No suitable video found for query: {alt_query}")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error during YouTube search for query '{alt_query}': {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error during YouTube search for query '{alt_query}': {e}")
+
+    logging.error("All alternative queries failed.")
     return None
