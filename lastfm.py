@@ -1,14 +1,17 @@
+# ==========================
+# Last.fm API Integration
+# ==========================
 import requests
 import os
 import logging
 from dotenv import load_dotenv
-from config import DEBUG_MODE
 
 load_dotenv()
 
 LASTFM_API_KEY = os.getenv('LASTFM_API_KEY')
 LASTFM_API_SECRET = os.getenv('LASTFM_API_SECRET')
 LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"  # Fix: Initialize DEBUG_MODE here
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
@@ -49,12 +52,6 @@ def get_song_by_mood(mood):
         else:
             logging.warning("No tracks found for the given mood.")
             return None
-    except requests.exceptions.HTTPError as http_err:
-        logging.error(f"HTTP error occurred: {http_err}")
-    except requests.exceptions.ConnectionError as conn_err:
-        logging.error(f"Connection error occurred: {conn_err}")
-    except requests.exceptions.Timeout as timeout_err:
-        logging.error(f"Timeout error occurred: {timeout_err}")
     except requests.exceptions.RequestException as req_err:
         logging.error(f"Request error occurred: {req_err}")
     except Exception as e:
