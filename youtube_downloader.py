@@ -254,11 +254,26 @@ def search_youtube_video(query, artist_name):
         "type": "video",
         "maxResults": 5
     }
-    response = requests.get(search_url, params=params)
-    response.raise_for_status()
-    results = response.json().get("items", [])
-    for item in results:
-        title = item["snippet"]["title"].lower()
-        if artist_name.lower() in title and not any(keyword in title for keyword in ["live", "karaoke", "cover", "remix", "loop"]):
-            return item["id"]["videoId"]
+    try:
+        logging.info(f"Searching YouTube for query: {query}")
+        response = requests.get(search_url, params=params)
+        response.raise_for_status()
+        results = response.json().get("items", [])
+        logging.debug(f"Search results: {results}")
+
+        for item in results:
+            title = item["snippet"]["title"].lower()
+            video_id = item["id"]["videoId"]
+            logging.debug(f"Checking video: {title} (ID: {video_id})")
+            if artist_name.lower() in title and not any(
+                keyword in title for keyword in ["live", "karaoke", "cover", "remix", "loop"]
+            ):
+                logging.info(f"Found matching video: {title} (ID: {video_id})")
+                return video_id
+
+        logging.warning("No suitable video found in search results.")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error during YouTube search: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error during YouTube search: {e}")
     return None
