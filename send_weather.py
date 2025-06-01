@@ -1,39 +1,36 @@
 import logging
 import os
-import json
-from datetime import datetime
 from weather import get_weather
 from telegram_bot import send_message
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
-WEATHER_MESSAGE_FILE = "weather_message.json"
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-def save_weather_message_id(message_id):
+def update_environment_variable(key, value):
     """
-    Save the weather message ID and the current date to a file for later updates.
+    Update an environment variable in the Deployment 1 environment.
     """
-    data = {
-        "message_id": message_id,
-        "date": datetime.now().strftime("%Y-%m-%d")
-    }
-    with open(WEATHER_MESSAGE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f)
-
-def load_weather_message_id():
-    """
-    Load the weather message ID from the file if it corresponds to the current date.
-    """
-    if os.path.exists(WEATHER_MESSAGE_FILE):
-        with open(WEATHER_MESSAGE_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if data.get("date") == datetime.now().strftime("%Y-%m-%d"):
-                return data.get("message_id")
-    return None
+    env_file = "/github/workspace/.env"  # Path to the environment file
+    try:
+        with open(env_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        with open(env_file, "w", encoding="utf-8") as f:
+            updated = False
+            for line in lines:
+                if line.startswith(f"{key}="):
+                    f.write(f"{key}={value}\n")
+                    updated = True
+                else:
+                    f.write(line)
+            if not updated:
+                f.write(f"{key}={value}\n")
+        logging.info(f"Updated environment variable: {key}={value}")
+    except Exception as e:
+        logging.error(f"Failed to update environment variable {key}: {e}")
 
 def send_weather_update():
     """
@@ -51,8 +48,9 @@ def send_weather_update():
         )
         result = send_message(weather_message)
         if result and "message_id" in result:
-            save_weather_message_id(result["message_id"])
-            logging.info(f"Weather message sent successfully with ID: {result['message_id']}")
+            message_id = result["message_id"]
+            update_environment_variable("WEATHER_MESSAGE_ID", message_id)
+            logging.info(f"Weather message sent successfully with ID: {message_id}")
         else:
             logging.error(f"Failed to send weather message. Response: {result}")
     else:
