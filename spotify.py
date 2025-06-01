@@ -4,6 +4,7 @@ import logging
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 import json
+import base64  # Add this import for encoding
 
 load_dotenv()
 
@@ -85,10 +86,13 @@ def push_sent_songs():
         response.raise_for_status()
         sha = response.json().get("sha", "")
 
+        # Encode content in base64
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
         # Push the updated file
         payload = {
             "message": "Update sent_songs.json",
-            "content": content.encode("utf-8").decode("latin1").encode("base64").decode("utf-8"),
+            "content": encoded_content,
             "sha": sha
         }
         response = requests.put(url, headers=headers, json=payload)
