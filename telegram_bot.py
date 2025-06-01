@@ -197,6 +197,12 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
                 os.remove(audio_path)
     else:
         logging.error("Failed to download audio from YouTube.")
+        fallback_message = (
+            f"Could not find a YouTube video for the query: {track_name} {artist_name}. "
+            f"Please try searching manually."
+        )
+        send_message(fallback_message)
+        return None
 
     # Fallback: Send preview URL if available
     if preview_url:
