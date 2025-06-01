@@ -83,6 +83,27 @@ def save_sent_song(track_name, artist_name, album_name):
         logging.warning(f"Could not save sent song: {e}")
 
 
+def load_playlist_genres(file_path):
+    """
+    Load genres from the playlist file and return a list of unique genres.
+    """
+    if not os.path.exists(file_path):
+        logging.error(f"Playlist file not found: {file_path}")
+        return []
+    genres = set()
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if ':' in line:
+                    genre = line.split(':')[1].strip()
+                    genres.add(genre)
+    except Exception as e:
+        logging.error(f"Error loading playlist file: {e}")
+    return list(genres)
+
+# Update playlist genres loading
+PLAYLIST_GENRES = load_playlist_genres("c:\\Users\\Zodiac\\Desktop\\Klavir - Alpha\\Destination, Infinity.txt")
+
 def get_song_by_mood_spotify(mood):
     """
     Get song recommendations based on mood using Spotify's recommendation API or a specific playlist if configured
@@ -112,6 +133,9 @@ def get_song_by_mood_spotify(mood):
             response = requests.get(playlist_url, headers=headers, params={'limit': 100})
             response.raise_for_status()
             playlist_data = response.json()
+            if not playlist_data or 'items' not in playlist_data:
+                logging.error("Invalid playlist data received.")
+                return None
             if 'items' in playlist_data and playlist_data['items']:
                 # Filter tracks by mood mapping genres if possible
                 mood_params = get_spotify_recommendations_params(mood)
