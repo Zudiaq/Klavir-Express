@@ -54,7 +54,7 @@ def send_weather_update():
             save_weather_message_id(result["message_id"])
             logging.info(f"Weather message sent successfully with ID: {result['message_id']}")
         else:
-            logging.error("Failed to send weather message.")
+            logging.error(f"Failed to send weather message. Response: {result}")
     else:
         logging.error("Failed to retrieve weather data.")
 
