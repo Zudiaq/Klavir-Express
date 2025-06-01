@@ -4,6 +4,7 @@ import http.client
 import json
 import yaml
 import requests
+import base64
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -51,6 +52,38 @@ def load_service_keys(service_name):
         logging.error(f"Unexpected error loading service keys: {e}")
         return []
 
+def push_yaml_keys():
+    """
+    Push the updated YAML file back to the private GitHub repository.
+    """
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{YAML_KEYS_FILE}"
+    headers = {
+        "Authorization": f"token {GH_PAT}",
+        "Content-Type": "application/json"
+    }
+    try:
+        with open(YAML_KEYS_FILE, "r", encoding="utf-8") as f:
+            content = f.read()
+        # Get the SHA of the existing file
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        sha = response.json().get("sha", "")
+
+        # Encode content in base64
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
+        # Push the updated file
+        payload = {
+            "message": "Update YAML keys file",
+            "content": encoded_content,
+            "sha": sha
+        }
+        response = requests.put(url, headers=headers, json=payload)
+        response.raise_for_status()
+        logging.info("Successfully pushed YAML keys file to GitHub.")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to push YAML keys file: {e}")
+
 def update_key_usage(service_name, key, reset_day):
     """
     Update the usage count of an API key and handle daily reset logic.
@@ -78,9 +111,12 @@ def update_key_usage(service_name, key, reset_day):
         else:
             logging.warning(f"Key {key} not found in the YAML file for service {service_name}.")
 
-        # Save the updated YAML file
+        # Save the updated YAML file locally
         with open(YAML_KEYS_FILE, "w", encoding="utf-8") as f:
             yaml.safe_dump(data, f)
+
+        # Push the updated YAML file to GitHub
+        push_yaml_keys()
         logging.info(f"Updated usage for key: {key}")
     except yaml.YAMLError as e:
         logging.error(f"Error parsing YAML file: {e}")
