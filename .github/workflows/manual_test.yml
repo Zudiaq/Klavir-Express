@@ -10,22 +10,16 @@ jobs:
     env:
       ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
       GH_PAT: ${{ secrets.GH_PAT }}
-      KLAVIR_TOKEN: ${{ secrets.KLAVIR_TOKEN }}
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
       LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
       OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
-      PRIVATE_REPO_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
       SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
       SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-      YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
-      YOUTUBE_PASSWORD: ${{ secrets.YOUTUBE_PASSWORD }}
-      YOUTUBE_USERNAME: ${{ secrets.YOUTUBE_USERNAME }}
       API_SELECTION: ${{ vars.API_SELECTION }}
       CITY: ${{ vars.CITY }}
-      COOKIES_FILE_PATH: ${{ vars.COOKIES_FILE_PATH }}
       REGION: ${{ vars.REGION }}
       DEBUG_MODE: ${{ vars.DEBUG_MODE }}
     steps:
