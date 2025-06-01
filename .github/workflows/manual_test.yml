@@ -48,6 +48,7 @@ jobs:
       CITY: ${{ vars.CITY }}
       REGION: ${{ vars.REGION }}
       DEBUG_MODE: ${{ vars.DEBUG_MODE }}
+      WEATHER_MESSAGE_ID: ${{ vars.WEATHER_MESSAGE_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -63,7 +64,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Update weather message
-        run: python update_weather.py update
+        run: python send_weather.py update
 
   send_music:
     runs-on: ubuntu-latest
