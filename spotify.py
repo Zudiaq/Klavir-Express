@@ -182,6 +182,7 @@ def get_song_by_mood_spotify(mood):
         'Authorization': f'Bearer {token}'
     }
     sent_songs = load_sent_songs()
+    logging.info(f"Loaded sent songs: {sent_songs}")
     max_attempts = 10
 
     # If a playlist URL is provided, fetch songs from the playlist
@@ -202,6 +203,7 @@ def get_song_by_mood_spotify(mood):
                 logging.error("Invalid playlist data received.")
                 return None
             valid_tracks = [item['track'] for item in playlist_data['items'] if item.get('track')]
+            logging.info(f"Valid tracks retrieved from playlist: {len(valid_tracks)}")
             import random
             attempts = 0
             while attempts < max_attempts and valid_tracks:
@@ -213,8 +215,10 @@ def get_song_by_mood_spotify(mood):
                 preview_url = track.get('preview_url')
                 song_key = (track_name, artist_name, album_name)
                 if song_key not in sent_songs:
+                    logging.info(f"Selected unique song: {song_key}")
                     save_sent_song(track_name, artist_name, album_name)
                     return track_name, artist_name, album_name, album_image, preview_url
+                logging.info(f"Duplicate song found: {song_key}, retrying...")
                 attempts += 1
             logging.error("Could not find a unique song from the playlist after several attempts.")
             return None
@@ -231,6 +235,7 @@ def get_song_by_mood_spotify(mood):
         track_name, artist_name, album_name, album_image, preview_url = result
         song_key = (track_name, artist_name, album_name)
         if song_key not in sent_songs:
+            logging.info(f"Selected unique song: {song_key}")
             save_sent_song(track_name, artist_name, album_name)
             return track_name, artist_name, album_name, album_image, preview_url
         else:
