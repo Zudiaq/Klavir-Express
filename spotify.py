@@ -4,7 +4,7 @@ import logging
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 import json
-import base64  
+import base64
 import yaml
 
 load_dotenv()
@@ -70,6 +70,40 @@ def pull_sent_songs():
         with open(SENT_SONGS_FILE, "w", encoding="utf-8") as f:
             yaml.dump([], f)  # Initialize an empty file if pull fails
 
+def push_file_to_github(file_path, content, commit_message):
+    """
+    Push a file to the private GitHub repository.
+    
+    Args:
+        file_path (str): Path to the file in the repository.
+        content (str): Content to write to the file.
+        commit_message (str): Commit message for the update.
+    """
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
+    headers = {
+        "Authorization": f"token {GH_PAT}",
+        "Content-Type": "application/json"
+    }
+    try:
+        # Get the SHA of the existing file
+        response = requests.get(url, headers=headers)
+        sha = response.json().get("sha", "") if response.status_code == 200 else None
+
+        # Encode content in base64
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
+        # Push the updated file
+        payload = {
+            "message": commit_message,
+            "content": encoded_content,
+            "sha": sha
+        }
+        response = requests.put(url, headers=headers, json=payload)
+        response.raise_for_status()
+        logging.info(f"Successfully pushed {file_path} to GitHub.")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to push {file_path} to GitHub: {e}")
+
 def push_sent_songs():
     """
     Push the updated sent_songs.yaml file back to the private GitHub repository.
@@ -114,7 +148,7 @@ def load_sent_songs():
         return set()
     try:
         with open(SENT_SONGS_FILE, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
+            data = yaml.safe_load(f) or []  # Initialize as an empty list if the file is empty
             return set(tuple(item.values()) for item in data)
     except (yaml.YAMLError, ValueError) as e:
         logging.warning(f"Could not load sent songs file: {e}. Reinitializing file.")
