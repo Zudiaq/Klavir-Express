@@ -55,12 +55,12 @@ def stylize_text(text, font="bold"):
 
 def append_channel_id(message):
     """
-    Append the channel ID as a hyperlink with a stylized font to the message.
+    Append the channel ID as a hyperlink to the message.
     Disable the preview for the hyperlink.
     """
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
     hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>Klavir Express</a>"
-    return f"{stylize_text(message, 'italic')}\n\n{hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>"
+    return f"{message}\n\n{hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>"
 
 def send_message(message):
     """
