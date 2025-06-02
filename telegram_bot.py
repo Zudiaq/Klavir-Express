@@ -19,14 +19,24 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-# Explicitly set the ffmpeg path
-AudioSegment.converter = "ffmpeg"  # Replace with the full path to ffmpeg if necessary
-
+AudioSegment.converter = "ffmpeg"  
 FONT_MAPPING = {
     "bold": {
         "A": "𝐀", "B": "𝐁", "C": "𝐂", "D": "𝐃", "E": "𝐄", "F": "𝐅", "G": "𝐆", "H": "𝐇", "I": "𝐈", "J": "𝐉",
         "K": "𝐊", "L": "𝐋", "M": "𝐌", "N": "𝐍", "O": "𝐎", "P": "𝐏", "Q": "𝐐", "R": "𝐑", "S": "𝐒", "T": "𝐓",
         "U": "𝐔", "V": "𝐕", "W": "𝐖", "X": "𝐗", "Y": "𝐘", "Z": "𝐙",
+        "a": "𝐚", "b": "𝐛", "c": "𝐜", "d": "𝐝", "e": "𝐞", "f": "𝐟", "g": "𝐠", "h": "𝐡", "i": "𝐢", "j": "𝐣",
+        "k": "𝐤", "l": "𝐥", "m": "𝐦", "n": "𝐧", "o": "𝐨", "p": "𝐩", "q": "𝐪", "r": "𝐫", "s": "𝐬", "t": "𝐭",
+        "u": "𝐮", "v": "𝐯", "w": "𝐰", "x": "𝐱", "y": "𝐲", "z": "𝐳",
+        " ": " ",  # Ensure spaces are preserved
+    },
+    "italic": {
+        "A": "𝘼", "B": "𝘽", "C": "𝘾", "D": "𝘿", "E": "𝙀", "F": "𝙁", "G": "𝙂", "H": "𝙃", "I": "𝙄", "J": "𝙅",
+        "K": "𝙆", "L": "𝙇", "M": "𝙈", "N": "𝙉", "O": "𝙊", "P": "𝙋", "Q": "𝙌", "R": "𝙍", "S": "𝙎", "T": "𝙏",
+        "U": "𝙐", "V": "𝙑", "W": "𝙒", "X": "𝙓", "Y": "𝙔", "Z": "𝙕",
+        "a": "𝙖", "b": "𝙗", "c": "𝙘", "d": "𝙙", "e": "𝙚", "f": "𝙛", "g": "𝙜", "h": "𝙝", "i": "𝙞", "j": "𝙟",
+        "k": "𝙠", "l": "𝙡", "m": "𝙢", "n": "𝙣", "o": "𝙤", "p": "𝙥", "q": "𝙦", "r": "𝙧", "s": "𝙨", "t": "𝙩",
+        "u": "𝙪", "v": "𝙫", "w": "𝙬", "x": "𝙭", "y": "𝙮", "z": "𝙯",
         " ": " ",  # Ensure spaces are preserved
     }
 }
@@ -36,7 +46,7 @@ def stylize_text(text, font="bold"):
     Stylize text using the specified font mapping.
     Args:
         text (str): The text to stylize.
-        font (str): The font style ('bold').
+        font (str): The font style ('bold' or 'italic').
     Returns:
         str: Stylized text.
     """
@@ -46,11 +56,12 @@ def stylize_text(text, font="bold"):
 def append_channel_id(message):
     """
     Append the channel ID as a hyperlink with a stylized font to the message.
+    Disable the preview for the hyperlink.
     """
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
     stylized_channel = stylize_text("Klavir Express", "bold")
     hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
-    return f"{message}\n\n{hyperlink}"
+    return f"{stylize_text(message, 'italic')}\n\n{hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>"
 
 def send_message(message):
     """
