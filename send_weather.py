@@ -23,7 +23,7 @@ FONT_MAPPING = {
         "a": "𝐚", "b": "𝐛", "c": "𝐜", "d": "𝐝", "e": "𝐞", "f": "𝐟", "g": "𝐠", "h": "𝐡", "i": "𝐢", "j": "𝐣",
         "k": "𝐤", "l": "𝐥", "m": "𝐦", "n": "𝐧", "o": "𝐨", "p": "𝐩", "q": "𝐪", "r": "𝐫", "s": "𝐬", "t": "𝐭",
         "u": "𝐮", "v": "𝐯", "w": "𝐰", "x": "𝐱", "y": "𝐲", "z": "𝐳",
-        " ": " ",  # Ensure spaces are preserved
+        " ": " ",  
     },
     "italic": {
         "A": "𝘼", "B": "𝘽", "C": "𝘾", "D": "𝘿", "E": "𝙀", "F": "𝙁", "G": "𝙂", "H": "𝙃", "I": "𝙄", "J": "𝙅",
@@ -33,7 +33,7 @@ FONT_MAPPING = {
         "a": "𝙖", "b": "𝙗", "c": "𝙘", "d": "𝙙", "e": "𝙚", "f": "𝙛", "g": "𝙜", "h": "𝙝", "i": "𝙞", "j": "𝙟",
         "k": "𝙠", "l": "𝙡", "m": "𝙢", "n": "𝙣", "o": "𝙤", "p": "𝙥", "q": "𝙦", "r": "𝙧", "s": "𝙨", "t": "𝙩",
         "u": "𝙪", "v": "𝙫", "w": "𝙬", "x": "𝙭", "y": "𝙮", "z": "𝙯",
-        " ": " ",  # Ensure spaces are preserved
+        " ": " ",  
     }
 }
 
@@ -77,8 +77,8 @@ def send_weather_update():
             f"🌬️ {stylize_text('Wind Speed:', 'italic')} {weather['wind_speed']} m/s\n"
             f"📜 {stylize_text('Description:', 'italic')} {weather['description']}"
         )
-        # Append channel hyperlink without preview
-        weather_message += f"\n\n<a href='https://t.me/{os.getenv('TELEGRAM_CHANNEL_ID', '@Klavir_Express').lstrip('@')}'>{stylize_text('Klavir Express', 'bold')}</a> <a href='https://t.me/{os.getenv('TELEGRAM_CHANNEL_ID', '@Klavir_Express').lstrip('@')}'>\u200b</a>"
+        # Append channel hyperlink without applying stylization to the HTML tags
+        weather_message += f"\n\n<a href='https://t.me/{os.getenv('TELEGRAM_CHANNEL_ID', '@Klavir_Express').lstrip('@')}'>Klavir Express</a> <a href='https://t.me/{os.getenv('TELEGRAM_CHANNEL_ID', '@Klavir_Express').lstrip('@')}'>\u200b</a>"
         result = send_message(weather_message)
         if result and "result" in result and "message_id" in result["result"]:
             message_id = result["result"]["message_id"]
