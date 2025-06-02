@@ -3,7 +3,6 @@ import os
 from weather import get_weather
 from telegram_bot import send_message
 from spotify import push_file_to_github
-from send_quote import stylize_text  
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
@@ -14,6 +13,33 @@ logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+FONT_MAPPING = {
+    "bold": {
+        "A": "𝐀", "B": "𝐁", "C": "𝐂", "D": "𝐃", "E": "𝐄", "F": "𝐅", "G": "𝐆", "H": "𝐇", "I": "𝐈", "J": "𝐉",
+        "K": "𝐊", "L": "𝐋", "M": "𝐌", "N": "𝐍", "O": "𝐎", "P": "𝐏", "Q": "𝐐", "R": "𝐑", "S": "𝐒", "T": "𝐓",
+        "U": "𝐔", "V": "𝐕", "W": "𝐖", "X": "𝐗", "Y": "𝐘", "Z": "𝐙",
+        "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗", "0": "𝟎"
+    },
+    "italic": {
+        "A": "𝘼", "B": "𝘽", "C": "𝘾", "D": "𝘿", "E": "𝙀", "F": "𝙁", "G": "𝙂", "H": "𝙃", "I": "𝙄", "J": "𝙅",
+        "K": "𝙆", "L": "𝙇", "M": "𝙈", "N": "𝙉", "O": "𝙊", "P": "𝙋", "Q": "𝙌", "R": "𝙍", "S": "𝙎", "T": "𝙏",
+        "U": "𝙐", "V": "𝙑", "W": "𝙒", "X": "𝙓", "Y": "𝙔", "Z": "𝙕",
+        "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗", "0": "𝟎"
+    }
+}
+
+def stylize_text(text, font="bold"):
+    """
+    Stylize text using the specified font mapping.
+    Args:
+        text (str): The text to stylize.
+        font (str): The font style ('bold' or 'italic').
+    Returns:
+        str: Stylized text.
+    """
+    mapping = FONT_MAPPING.get(font, {})
+    return ''.join(mapping.get(char, char) for char in text)
 
 def save_weather_message_id_to_github(message_id):
     """
