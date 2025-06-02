@@ -49,8 +49,7 @@ def update_weather_message():
             f"🌬️ Wind Speed: {weather['wind_speed']} m/s\n"
             f"📜 Description: {weather['description']}"
         )
-        # Append channel hyperlink using append_channel_id
-        weather_message = append_channel_id(weather_message)  # Ensure only one hyperlink is added
+        # Don't append channel hyperlink here as it's already done in edit_message
         message_id = pull_weather_message_id_from_github()
         if message_id:
             result = edit_message(message_id, weather_message)
