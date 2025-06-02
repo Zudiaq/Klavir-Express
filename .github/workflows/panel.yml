@@ -29,7 +29,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install python-telegram-bot pyyaml nest_asyncio requests
+          pip install python-telegram-bot pyyaml nest_asyncio requests python-dotenv
 
       - name: Run panel
         run: |
