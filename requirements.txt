@@ -4,3 +4,4 @@ requests
 translate
 pyyaml
 pydub
+pytz
