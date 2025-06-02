@@ -331,6 +331,13 @@ def edit_message(message_id, new_text):
         logging.error("Telegram credentials are not set in environment variables")
         return None
     url = f'https://api.telegram.org/bot{token}/editMessageText'
+    # Convert message_id to integer to ensure proper format for Telegram API
+    try:
+        message_id = int(message_id)
+    except (ValueError, TypeError):
+        logging.error(f"Invalid message_id format: {message_id}. Must be convertible to integer.")
+        return None
+        
     payload = {
         'chat_id': chat_id,
         'message_id': message_id,
