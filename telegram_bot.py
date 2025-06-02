@@ -59,8 +59,7 @@ def append_channel_id(message):
     Disable the preview for the hyperlink.
     """
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
-    stylized_channel = stylize_text("Klavir Express", "bold")
-    hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
+    hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>Klavir Express</a>"
     return f"{stylize_text(message, 'italic')}\n\n{hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>"
 
 def send_message(message):
@@ -80,7 +79,12 @@ def send_message(message):
         logging.error("Telegram credentials are not set in environment variables")
         return None
     url = f'https://api.telegram.org/bot{token}/sendMessage'
-    payload = {'chat_id': chat_id, 'text': append_channel_id(message), 'parse_mode': 'HTML'}
+    payload = {
+        'chat_id': chat_id,
+        'text': append_channel_id(message),
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True  # Disable preview for hyperlinks
+    }
     try:
         logging.debug(f"Sending message to Telegram chat {chat_id} with payload: {payload}")
         response = requests.post(url, json=payload)
