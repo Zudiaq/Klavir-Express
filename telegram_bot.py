@@ -82,13 +82,14 @@ def send_message(message):
     url = f'https://api.telegram.org/bot{token}/sendMessage'
     payload = {'chat_id': chat_id, 'text': append_channel_id(message), 'parse_mode': 'HTML'}
     try:
-        logging.debug(f"Sending message to Telegram chat {chat_id}")
+        logging.debug(f"Sending message to Telegram chat {chat_id} with payload: {payload}")
         response = requests.post(url, json=payload)
         response.raise_for_status()
         logging.debug("Message sent successfully")
         return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f"Error sending message: {e}")
+        logging.error(f"Payload causing error: {payload}")
         return None
 
 def send_audio_with_caption(audio_path, caption):
@@ -141,7 +142,6 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     """
     if not ENABLE_TELEGRAM:
         logging.info("Telegram messaging is disabled in config")
-        return None
 
     token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
