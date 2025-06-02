@@ -3,6 +3,7 @@ import os
 from weather import get_weather
 from telegram_bot import send_message
 from spotify import push_file_to_github
+from send_quote import stylize_text  
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
@@ -36,11 +37,11 @@ def send_weather_update():
     weather = get_weather()
     if weather:
         weather_message = (
-            f"\U0001F324 <b>Weather</b>\n"
-            f"\U0001F321 Temperature: {weather['temp']}\u00B0C\n"
-            f"\U0001F4A7 Humidity: {weather['humidity']}%\n"
-            f"\U0001F32C Wind Speed: {weather['wind_speed']} m/s\n"
-            f"\U0001F4DC Description: {weather['description']}"
+            f"{stylize_text('Weather Update', 'bold')}\n"
+            f"🌡️ {stylize_text('Temperature:', 'italic')} {weather['temp']}°C\n"
+            f"💧 {stylize_text('Humidity:', 'italic')} {weather['humidity']}%\n"
+            f"🌬️ {stylize_text('Wind Speed:', 'italic')} {weather['wind_speed']} m/s\n"
+            f"📜 {stylize_text('Description:', 'italic')} {weather['description']}"
         )
         result = send_message(weather_message)
         if result and "result" in result and "message_id" in result["result"]:
