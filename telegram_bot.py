@@ -23,20 +23,20 @@ logging.basicConfig(
 AudioSegment.converter = "ffmpeg"  # Replace with the full path to ffmpeg if necessary
 
 FONT_MAPPING = {
-    "italic": {
-        "A": "𝘼", "B": "𝘽", "C": "𝘾", "D": "𝘿", "E": "𝙀", "F": "𝙁", "G": "𝙂", "H": "𝙃", "I": "𝙄", "J": "𝙅",
-        "K": "𝙆", "L": "𝙇", "M": "𝙈", "N": "𝙉", "O": "𝙊", "P": "𝙋", "Q": "𝙌", "R": "𝙍", "S": "𝙎", "T": "𝙏",
-        "U": "𝙐", "V": "𝙑", "W": "𝙒", "X": "𝙓", "Y": "𝙔", "Z": "𝙕",
-        "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗", "0": "𝟎"
+    "bold": {
+        "A": "𝐀", "B": "𝐁", "C": "𝐂", "D": "𝐃", "E": "𝐄", "F": "𝐅", "G": "𝐆", "H": "𝐇", "I": "𝐈", "J": "𝐉",
+        "K": "𝐊", "L": "𝐋", "M": "𝐌", "N": "𝐍", "O": "𝐎", "P": "𝐏", "Q": "𝐐", "R": "𝐑", "S": "𝐒", "T": "𝐓",
+        "U": "𝐔", "V": "𝐕", "W": "𝐖", "X": "𝐗", "Y": "𝐘", "Z": "𝐙",
+        " ": " ",  # Ensure spaces are preserved
     }
 }
 
-def stylize_text(text, font="italic"):
+def stylize_text(text, font="bold"):
     """
     Stylize text using the specified font mapping.
     Args:
         text (str): The text to stylize.
-        font (str): The font style ('italic').
+        font (str): The font style ('bold').
     Returns:
         str: Stylized text.
     """
@@ -48,7 +48,7 @@ def append_channel_id(message):
     Append the channel ID as a hyperlink with a stylized font to the message.
     """
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
-    stylized_channel = stylize_text("Visit Us", "italic")
+    stylized_channel = stylize_text("Klavir Express", "bold")
     hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
     return f"{message}\n\n{hyperlink}"
 
