@@ -79,7 +79,7 @@ def send_weather_update():
             f"📜 Description: {weather['description']}"
         )
         # Append channel hyperlink using append_channel_id
-        weather_message = append_channel_id(weather_message)
+        weather_message = append_channel_id(weather_message)  # Ensure only one hyperlink is added
         result = send_message(weather_message)
         if result and "result" in result and "message_id" in result["result"]:
             message_id = result["result"]["message_id"]
