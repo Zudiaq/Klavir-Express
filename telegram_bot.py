@@ -332,14 +332,16 @@ def edit_message(message_id, new_text):
         'chat_id': chat_id,
         'message_id': message_id,
         'text': append_channel_id(new_text),
-        'parse_mode': 'HTML'
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True  # Disable preview for hyperlinks
     }
     try:
-        logging.debug(f"Editing message {message_id} in Telegram chat {chat_id}")
+        logging.debug(f"Editing message {message_id} in Telegram chat {chat_id} with payload: {payload}")
         response = requests.post(url, json=payload)
         response.raise_for_status()
         logging.debug("Message edited successfully")
         return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f"Error editing message: {e}")
+        logging.error(f"Payload causing error: {payload}")
         return None
