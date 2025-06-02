@@ -147,6 +147,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     """
     if not ENABLE_TELEGRAM:
         logging.info("Telegram messaging is disabled in config")
+        return None
 
     token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
@@ -165,9 +166,11 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     # Search and download audio from YouTube
     audio_path = search_and_download_youtube_mp3(track_name, artist_name, album_name)
     if audio_path and os.path.exists(audio_path):
+        # Format the MP3 file name properly
         formatted_name = format_mp3_filename(track_name, artist_name, album_name)
-        os.rename(audio_path, formatted_name)
-        audio_path = formatted_name
+        formatted_path = os.path.join(os.path.dirname(audio_path), formatted_name)
+        os.rename(audio_path, formatted_path)
+        audio_path = formatted_path
 
         try:
             # Convert .m4a to .mp3 if necessary
