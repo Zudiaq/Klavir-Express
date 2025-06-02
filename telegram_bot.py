@@ -8,6 +8,7 @@ import logging
 from dotenv import load_dotenv
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
+from send_quote import stylize_text  # Import stylize_text for formatting
 
 load_dotenv()
 
@@ -24,10 +25,12 @@ AudioSegment.converter = "ffmpeg"  # Replace with the full path to ffmpeg if nec
 
 def append_channel_id(message):
     """
-    Append the channel ID to the message with a blank line.
+    Append the channel ID as a hyperlink with a stylized font to the message.
     """
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
-    return f"{message}\n\n{channel_id}"
+    stylized_channel = stylize_text("Visit Us", "italic")
+    hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
+    return f"{message}\n\n{hyperlink}"
 
 def send_message(message):
     """
@@ -115,10 +118,12 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
         logging.error("Telegram credentials are not set in environment variables")
         return None
 
-    message = f"\U0001F3B5 <b>{track_name}</b>\n"
-    message += f"\U0001F464 {artist_name}\n"
+    message = (
+        f"\U0001F3B5 {stylize_text(track_name, 'bold')}\n"
+        f"\U0001F464 {stylize_text(artist_name, 'italic')}\n"
+    )
     if album_name:
-        message += f"\U0001F4BF {album_name}\n"
+        message += f"\U0001F4BF {stylize_text(album_name, 'italic')}\n"
 
     logging.info(f"Sending music recommendation: {message}")
     # Search and download audio from YouTube
