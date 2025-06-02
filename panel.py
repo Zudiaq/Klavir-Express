@@ -317,18 +317,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Check command limit
     if not await check_command_limit(user_id, "start"):
-        try:
-            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
-        except Exception:
-            pass
         return  # Do not process further if limit is exceeded
 
     # Check if user already exists in cached_users
     if any(u["chat_id"] == user_id for u in cached_users):
-        try:
-            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
-        except Exception:
-            pass
         return  # Do not send welcome message if user already exists
 
     user_data = {
@@ -346,12 +338,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Send welcome message
     await update.message.reply_text(t(user_id, "welcome_user", name=user.first_name))
     await context.bot.send_message(chat_id=ADMIN_CHAT_IDS[0], text=t(user_id, "start_admin_notify", user_data=yaml.dump(user_data)))
-
-    # Delete the /start message
-    try:
-        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
-    except Exception:
-        pass
 
 async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
