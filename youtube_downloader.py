@@ -20,6 +20,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+# Define the usage limit for API keys (can be adjusted by the developer)
+API_USAGE_LIMIT = 300
+
 # ==========================
 # Utility Functions
 # ==========================
@@ -126,10 +129,11 @@ def update_key_usage(service_name, key, reset_day):
 def get_available_key(service_name):
     """
     Get the first available API key for the specified service.
+    Skips keys that have reached the usage limit.
     """
     keys = load_service_keys(service_name)
     for entry in keys:
-        if entry["usage"] < 300:
+        if entry["usage"] < API_USAGE_LIMIT:  # Check against the usage limit
             return entry["key"], entry["reset_day"]
     notify_admins(f"All API keys for {service_name} are exhausted!")
     return None, None
