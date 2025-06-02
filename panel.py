@@ -564,6 +564,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton(t(user_id, "send_message_all"), callback_data="send_message_all")],
             [InlineKeyboardButton(t(user_id, "refresh_data"), callback_data="refresh_data")],
             [InlineKeyboardButton(t(user_id, "remove_user"), callback_data="remove_user")],
+            [InlineKeyboardButton(t(user_id, "view_api_keys"), callback_data="view_api_keys")],
             [InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
