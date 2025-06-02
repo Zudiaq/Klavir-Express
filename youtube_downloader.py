@@ -102,14 +102,19 @@ def update_key_usage(service_name, key, reset_day):
         today = datetime.now().day
         for entry in keys:
             if entry["key"] == key:
-                # Reset usage if it's the reset day and hasn't been reset today
-                if today == reset_day and entry.get("last_reset") != str(datetime.now().date()):
-                    entry["usage"] = 1
-                    entry["last_reset"] = str(datetime.now().date())
-                    logging.info(f"Usage reset for key: {key}")
+                # Ensure we only update keys that are below the usage limit
+                if entry["usage"] < API_USAGE_LIMIT:
+                    # Reset usage if it's the reset day and hasn't been reset today
+                    if today == reset_day and entry.get("last_reset") != str(datetime.now().date()):
+                        entry["usage"] = 1
+                        entry["last_reset"] = str(datetime.now().date())
+                        logging.info(f"Usage reset for key: {key}")
+                    else:
+                        # Increment usage
+                        entry["usage"] += 1
+                        logging.info(f"Incremented usage for key: {key} to {entry['usage']}")
                 else:
-                    # Increment usage
-                    entry["usage"] += 1
+                    logging.warning(f"Key {key} has reached the usage limit and will not be updated.")
                 break
         else:
             logging.warning(f"Key {key} not found in the YAML file for service {service_name}.")
@@ -134,7 +139,10 @@ def get_available_key(service_name):
     keys = load_service_keys(service_name)
     for entry in keys:
         if entry["usage"] < API_USAGE_LIMIT:  # Check against the usage limit
+            logging.info(f"Using API key: {entry['key']} with usage: {entry['usage']}")
             return entry["key"], entry["reset_day"]
+        else:
+            logging.info(f"Skipping API key: {entry['key']} with usage: {entry['usage']} (limit reached)")
     notify_admins(f"All API keys for {service_name} are exhausted!")
     return None, None
 
