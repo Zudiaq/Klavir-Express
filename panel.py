@@ -8,7 +8,8 @@ import nest_asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta
 import sys
-import requests  
+import requests
+from api_key_stats import get_api_key_stats  
 
 # ==========================
 # Configuration Variables
@@ -394,6 +395,7 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton(t(user_id, "send_message_all"), callback_data="send_message_all")],
         [InlineKeyboardButton(t(user_id, "refresh_data"), callback_data="refresh_data")],
         [InlineKeyboardButton(t(user_id, "remove_user"), callback_data="remove_user")],
+        [InlineKeyboardButton(t(user_id, "view_api_keys"), callback_data="view_api_keys")],
         [InlineKeyboardButton(t(user_id, "cancel"), callback_data="cancel")],
     ]
     admin_message = await update.message.reply_text(
@@ -450,6 +452,7 @@ LANGUAGES = {
         "send_message_all": "📢 Send Message to All Users",
         "refresh_data": "🔄 Refresh User Data",
         "remove_user": "🗑️ Remove User from List",
+        "view_api_keys": "🔑 View API Key Stats",
         "cancel": "❌ Cancel",
         "back_to_main": "🔙 Back to Main Menu",
         "select_language": "Please select your language:",
@@ -479,6 +482,7 @@ LANGUAGES = {
         "send_message_all": "📢 ارسال پیام به همه کاربران",
         "refresh_data": "🔄 بروزرسانی لیست کاربران",
         "remove_user": "🗑️ حذف کاربر از لیست",
+        "view_api_keys": "🔑 مشاهده وضعیت کلیدهای API",
         "cancel": "❌ لغو",
         "back_to_main": "🔙 بازگشت به منوی اصلی",
         "select_language": "لطفاً زبان خود را انتخاب کنید:",
@@ -600,6 +604,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "refresh_data":
         sync_repo()
         await send_temporary_message(context, update.effective_chat.id, t(user_id, "refresh_success"))
+        
+    elif query.data == "view_api_keys":
+        # Get API key statistics
+        api_key_stats = get_api_key_stats()
+        keyboard = [[InlineKeyboardButton(t(user_id, "back_to_main"), callback_data="back_to_main")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(api_key_stats, reply_markup=reply_markup, parse_mode="HTML")
 
     elif query.data == "remove_user":
         sync_repo()
