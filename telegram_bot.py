@@ -59,7 +59,8 @@ def append_channel_id(message):
     Disable the preview for the hyperlink.
     """
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
-    hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>Klavir Express</a>"
+    stylized_channel = stylize_text("Klavir Express", "bold")
+    hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
     return f"{message}\n\n{hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>"
 
 def send_message(message):
