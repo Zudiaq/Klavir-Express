@@ -8,7 +8,6 @@ import logging
 from dotenv import load_dotenv
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
-from send_quote import stylize_text  # Import stylize_text for formatting
 
 load_dotenv()
 
@@ -22,6 +21,27 @@ logging.basicConfig(
 
 # Explicitly set the ffmpeg path
 AudioSegment.converter = "ffmpeg"  # Replace with the full path to ffmpeg if necessary
+
+FONT_MAPPING = {
+    "italic": {
+        "A": "𝘼", "B": "𝘽", "C": "𝘾", "D": "𝘿", "E": "𝙀", "F": "𝙁", "G": "𝙂", "H": "𝙃", "I": "𝙄", "J": "𝙅",
+        "K": "𝙆", "L": "𝙇", "M": "𝙈", "N": "𝙉", "O": "𝙊", "P": "𝙋", "Q": "𝙌", "R": "𝙍", "S": "𝙎", "T": "𝙏",
+        "U": "𝙐", "V": "𝙑", "W": "𝙒", "X": "𝙓", "Y": "𝙔", "Z": "𝙕",
+        "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗", "0": "𝟎"
+    }
+}
+
+def stylize_text(text, font="italic"):
+    """
+    Stylize text using the specified font mapping.
+    Args:
+        text (str): The text to stylize.
+        font (str): The font style ('italic').
+    Returns:
+        str: Stylized text.
+    """
+    mapping = FONT_MAPPING.get(font, {})
+    return ''.join(mapping.get(char, char) for char in text)
 
 def append_channel_id(message):
     """
