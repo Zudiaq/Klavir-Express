@@ -5,7 +5,6 @@ on:
     - cron: '30 8 * * *'  # 8:30 AM
     - cron: '0 9 * * *'   # 9:00 AM
     - cron: '30 23 * * *' # 11:30 PM
-  workflow_dispatch:
 
 jobs:
   morning_tasks:
