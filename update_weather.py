@@ -41,7 +41,7 @@ def update_weather_message():
     weather = get_weather()
     if weather:
         weather_message = (
-            f"⛅️<b>Weather Update</b>\n"
+            f"⛅️ <b>Weather Update</b>\n"
             f"🌡️ Temperature: {weather['temp']}°C\n"
             f"💧 Humidity: {weather['humidity']}%\n"
             f"🌬️ Wind Speed: {weather['wind_speed']} m/s\n"
