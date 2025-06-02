@@ -90,6 +90,12 @@ def push_yaml_keys():
 def update_key_usage(service_name, key, reset_day):
     """
     Update the usage count of an API key and handle daily reset logic.
+    
+    The function implements two key mechanisms:
+    1. Usage limit: If a key's usage reaches API_USAGE_LIMIT, it won't be updated further
+    2. Monthly reset: Each key has a designated reset_day in the month. When the current day
+       matches this reset_day, the usage is reset to 1 (counting the current usage), but only
+       if the key hasn't already been reset today (checked via last_reset date)
     """
     if not os.path.exists(YAML_KEYS_FILE):
         logging.error(f"YAML keys file not found: {YAML_KEYS_FILE}")
@@ -100,21 +106,30 @@ def update_key_usage(service_name, key, reset_day):
             data = yaml.safe_load(f)
         keys = data.get(f"{service_name} keys", [])
         today = datetime.now().day
+        today_date = str(datetime.now().date())
+        
         for entry in keys:
             if entry["key"] == key:
                 # Ensure we only update keys that are below the usage limit
                 if entry["usage"] < API_USAGE_LIMIT:
-                    # Reset usage if it's the reset day and hasn't been reset today
-                    if today == reset_day and entry.get("last_reset") != str(datetime.now().date()):
-                        entry["usage"] = 1
-                        entry["last_reset"] = str(datetime.now().date())
-                        logging.info(f"Usage reset for key: {key}")
+                    # Check if today is the reset day for this key
+                    if today == entry["reset_day"]:
+                        # Check if the key has already been reset today
+                        if entry.get("last_reset") != today_date:
+                            # Reset usage to 1 (counting the current usage)
+                            entry["usage"] = 1
+                            entry["last_reset"] = today_date
+                            logging.info(f"Usage reset for key: {key} on reset day {reset_day}")
+                        else:
+                            # Key already reset today, just increment usage
+                            entry["usage"] += 1
+                            logging.info(f"Key {key} already reset today. Incremented usage to {entry['usage']}")
                     else:
-                        # Increment usage
+                        # Not reset day, just increment usage
                         entry["usage"] += 1
                         logging.info(f"Incremented usage for key: {key} to {entry['usage']}")
                 else:
-                    logging.warning(f"Key {key} has reached the usage limit and will not be updated.")
+                    logging.warning(f"Key {key} has reached the usage limit ({API_USAGE_LIMIT}) and will not be updated.")
                 break
         else:
             logging.warning(f"Key {key} not found in the YAML file for service {service_name}.")
