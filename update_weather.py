@@ -3,6 +3,8 @@ import os
 import requests
 from weather import get_weather
 from telegram_bot import edit_message
+from send_quote import stylize_text
+from telegram_bot import append_channel_id
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
@@ -41,13 +43,14 @@ def update_weather_message():
     weather = get_weather()
     if weather:
         weather_message = (
-            f"⛅️ <b>Weather Update</b>\n"
+            f"⛅️ {stylize_text('Weather Update', 'bold')}\n"
             f"🌡️ Temperature: {weather['temp']}°C\n"
             f"💧 Humidity: {weather['humidity']}%\n"
             f"🌬️ Wind Speed: {weather['wind_speed']} m/s\n"
-            f"📜 Description: {weather['description']}\n\n"
-            f"<a href='https://t.me/{os.getenv('TELEGRAM_CHANNEL_ID', '@Klavir_Express').lstrip('@')}'>𝐊𝐥𝐚𝐯𝐢𝐫 𝐄𝐱𝐩𝐫𝐞𝐬𝐬</a>"
+            f"📜 Description: {weather['description']}"
         )
+        # Append channel hyperlink using append_channel_id
+        weather_message = append_channel_id(weather_message)
         message_id = pull_weather_message_id_from_github()
         if message_id:
             result = edit_message(message_id, weather_message)
