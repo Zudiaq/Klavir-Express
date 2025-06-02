@@ -71,14 +71,13 @@ def send_weather_update():
     weather = get_weather()
     if weather:
         weather_message = (
-            f"⛅️{stylize_text('Weather Update', 'bold')}\n"
+            f"⛅️ {stylize_text('Weather Update', 'bold')}\n"
             f"🌡️ Temperature: {weather['temp']}°C\n"
             f"💧 Humidity: {weather['humidity']}%\n"
             f"🌬️ Wind Speed: {weather['wind_speed']} m/s\n"
-            f"📜 Description: {weather['description']}"
+            f"📜 Description: {weather['description']}\n\n"
+            f"<a href='https://t.me/{os.getenv('TELEGRAM_CHANNEL_ID', '@Klavir_Express').lstrip('@')}'>𝐊𝐥𝐚𝐯𝐢𝐫 𝐄𝐱𝐩𝐫𝐞𝐬𝐬</a>"
         )
-        # Append channel hyperlink only once
-        weather_message += f"\n\n<a href='https://t.me/{os.getenv('TELEGRAM_CHANNEL_ID', '@Klavir_Express').lstrip('@')}'>Klavir Express</a>"
         result = send_message(weather_message)
         if result and "result" in result and "message_id" in result["result"]:
             message_id = result["result"]["message_id"]
