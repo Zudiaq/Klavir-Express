@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime
+from pytz import timezone  # Import timezone for handling Tehran time
 from quote import get_quote
 from google_translate import translate_to_persian
 from telegram_bot import send_message
@@ -50,9 +51,10 @@ def stylize_text(text, font="bold"):
 def send_quote_message():
     """
     Retrieve a quote, translate it to Persian, and send it via Telegram with proper formatting.
-    Add conditional morning or night greetings based on the time.
+    Add conditional morning or night greetings based on Tehran time.
     """
     logging.info("Sending quote message...")
+    tehran_time = datetime.now(timezone("Asia/Tehran"))  # Get current time in Tehran
     quote, author = get_quote()
     if quote:
         translated_quote = translate_to_persian(quote)
@@ -60,11 +62,10 @@ def send_quote_message():
         if author and author.lower() != "unknown":
             styled_quote += f"\n\n— {stylize_text(author, 'italic')}"
 
-        # Add conditional greetings
-        now = datetime.now()
-        if 6 <= now.hour < 17:  # Morning
+        # Add conditional greetings based on Tehran time
+        if 6 <= tehran_time.hour < 17:  # Morning
             styled_quote += f"\n\n☀️ {stylize_text('Good Morning', 'italic')}"
-        elif 18 <= now.hour < 24:  # Night
+        elif 18 <= tehran_time.hour < 24:  # Night
             styled_quote += f"\n\n🌙 {stylize_text('Good Night', 'italic')}"
 
         result = send_message(styled_quote)
