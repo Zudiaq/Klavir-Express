@@ -92,7 +92,7 @@ def push_file_to_github(file_path, content, commit_message, gh_pat):
         "Content-Type": "application/json"
     }
     try:
-        # Get the SHA of the existing file
+        # Fetch the latest SHA of the file
         response = requests.get(url, headers=headers)
         sha = response.json().get("sha", "") if response.status_code == 200 else None
 
@@ -108,6 +108,18 @@ def push_file_to_github(file_path, content, commit_message, gh_pat):
         response = requests.put(url, headers=headers, json=payload)
         response.raise_for_status()
         logging.info(f"Successfully pushed {file_path} to GitHub.")
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 409:
+            logging.warning(f"Conflict detected while pushing {file_path}. Retrying with the latest SHA.")
+            # Retry by fetching the latest SHA
+            response = requests.get(url, headers=headers)
+            sha = response.json().get("sha", "")
+            payload["sha"] = sha
+            response = requests.put(url, headers=headers, json=payload)
+            response.raise_for_status()
+            logging.info(f"Successfully resolved conflict and pushed {file_path} to GitHub.")
+        else:
+            logging.error(f"Failed to push {file_path} to GitHub: {e}")
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to push {file_path} to GitHub: {e}")
 
