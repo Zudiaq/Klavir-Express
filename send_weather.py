@@ -104,6 +104,7 @@ def send_weather_update():
             f"🌞 {stylize_text('UV Index:', 'italic')} {stylize_text(str(weather['uv_index']), 'bold')} ({uv_risk})\n\n"
             f"📍{stylize_text(CITY, 'italic')}"
         )
+        weather_message = append_channel_id(weather_message)  # Add footer with channel and bot IDs
         result = send_message(weather_message)
         if result and "result" in result and "message_id" in result["result"]:
             message_id = result["result"]["message_id"]
