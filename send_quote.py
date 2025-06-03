@@ -5,6 +5,7 @@ from pytz import timezone  # Import timezone for handling Tehran time
 from quote import get_quote
 from google_translate import translate_to_persian
 from telegram_bot import send_message
+from telegram_bot import append_channel_id
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
@@ -68,6 +69,7 @@ def send_quote_message():
         elif 18 <= tehran_time.hour < 24:  # Night
             styled_quote += f"\n\n🌙 {stylize_text('Good Night', 'italic')}"
 
+        styled_quote = append_channel_id(styled_quote)  # Add footer with channel and bot IDs
         result = send_message(styled_quote)
         logging.debug(f"Quote message send result: {result}")
     else:
