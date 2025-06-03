@@ -317,5 +317,7 @@ def search_youtube_video(query, artist_name):
         except Exception as e:
             logging.error(f"Unexpected error during YouTube search for query '{alt_query}': {e}")
 
+    # Notify admins only if all alternative queries fail
     logging.error("All alternative queries failed.")
+    notify_admins("⚠️ No suitable YouTube video found for the given queries.")
     return None
