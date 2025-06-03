@@ -64,7 +64,11 @@ def append_channel_id(message):
     stylized_channel = stylize_text("Klavir Express", "bold")
     bot_hyperlink = f"<a href='https://t.me/{bot_id.lstrip('@')}'>{stylized_bot}</a>"
     channel_hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
-    return f"{message}\n\n🤖 {bot_hyperlink}\n🎹 {channel_hyperlink}"
+    footer = f"\n\n🤖 {bot_hyperlink}\n🎹 {channel_hyperlink}"
+    # Ensure the footer is appended only once
+    if footer not in message:
+        message += footer
+    return message
 
 def send_message(message):
     """
