@@ -26,7 +26,7 @@ PLAYLIST_GENRES = [
 
     # Pop and R&B genres
     "pop", "traditional pop", "vocal jazz", "disco", "bedroom pop", "latin pop",
-    "soul", "funk", "motown", "neo soul", "alternative r&b", "chill pop", "funk rap",
+    "soul", "funk", "motown", "neo soul", "alternative r&b", "chill pop", "funk rap", "j-pop",
 
     # Hip-Hop and Rap genres
     "hip hop", "g-funk", "conscious hip hop", "alternative hip hop", "jazz rap", "trap",
@@ -49,7 +49,7 @@ PLAYLIST_GENRES = [
     "instrumental ballads", "string quartet", "baroque", "romantic era",
 
     # Rare/Niche genres (minimal inclusion)
-    "hyperpop", "phonk", "vaporwave", "chillhop", "lo-fi beats", "future funk"
+    "hyperpop", "vaporwave", "chillhop", "lo-fi beats", "future funk"
 ]
 
 MOOD_MAPPING = {
