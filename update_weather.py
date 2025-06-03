@@ -80,7 +80,6 @@ def update_weather_message():
             f"🌞 {stylize_text('UV Index:', 'italic')} {uv_risk}\n\n"
             f"📍{stylize_text(CITY, 'italic')}"
         )
-        weather_message = append_channel_id(weather_message)  # Add footer with channel and bot IDs
         message_id = pull_weather_message_id_from_github()
         if message_id:
             result = edit_message(message_id, weather_message)
