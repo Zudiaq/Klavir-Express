@@ -55,16 +55,16 @@ def stylize_text(text, font="bold"):
 
 def append_channel_id(message):
     """
-    Append the channel ID and bot ID as hyperlinks to the message.
+    Append the bot ID and channel ID as hyperlinks to the message.
     Disable the preview for the hyperlinks.
     """
-    channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
     bot_id = os.getenv("TELEGRAM_BOT_ID", "@Klavir_Express_Bot")
-    stylized_channel = stylize_text("Klavir Express", "bold")
+    channel_id = os.getenv("TELEGRAM_CHANNEL_ID", "@Klavir_Express")
     stylized_bot = stylize_text("Klavir Bot", "italic")
-    channel_hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
+    stylized_channel = stylize_text("Klavir Express", "bold")
     bot_hyperlink = f"<a href='https://t.me/{bot_id.lstrip('@')}'>{stylized_bot}</a>"
-    return f"{message}\n\n🎹 {channel_hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>\n🤖 {bot_hyperlink} <a href='https://t.me/{bot_id.lstrip('@')}'>\u200b</a>"
+    channel_hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
+    return f"{message}\n\n🤖 {bot_hyperlink} <a href='https://t.me/{bot_id.lstrip('@')}'>\u200b</a>\n🎹 {channel_hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>"
 
 def send_message(message):
     """
