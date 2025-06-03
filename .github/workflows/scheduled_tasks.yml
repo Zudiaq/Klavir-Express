@@ -2,13 +2,21 @@ name: Scheduled Tasks
 
 on:
   schedule:
-    - cron: '30 8 * * *'  # 8:30 AM
-    - cron: '0 9 * * *'   # 9:00 AM
-    - cron: '30 23 * * *' # 11:30 PM
+    - cron: '30 5 * * *'  # 9:00 AM (Tehran time - 5:30 AM UTC)
+    - cron: '0 7 * * *'   # 10:30 AM (Tehran time - 7:00 AM UTC)
+    - cron: '30 8 * * *'  # 12:00 PM (Tehran time - 8:30 AM UTC)
+    - cron: '0 10 * * *'  # 1:30 PM (Tehran time - 10:00 AM UTC)
+    - cron: '30 11 * * *' # 3:00 PM (Tehran time - 11:30 AM UTC)
+    - cron: '0 13 * * *'  # 4:30 PM (Tehran time - 1:00 PM UTC)
+    - cron: '30 14 * * *' # 6:00 PM (Tehran time - 2:30 PM UTC)
+    - cron: '0 16 * * *'  # 7:30 PM (Tehran time - 4:00 PM UTC)
+    - cron: '30 17 * * *' # 9:00 PM (Tehran time - 5:30 PM UTC)
+    - cron: '0 19 * * *'  # 10:30 PM (Tehran time - 7:00 PM UTC)
+    - cron: '0 3 * * *'   # 6:30 AM (Tehran time - 3:00 AM UTC) - Keeping the nightly quote
 
 jobs:
-  morning_tasks:
-    if: startsWith(github.event.schedule, '30 8')  # Run only at 8:30 AM
+  morning_weather_quote:
+    if: startsWith(github.event.schedule, '30 5')  # Run only at 9:00 AM (Tehran time)
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
@@ -46,7 +54,7 @@ jobs:
         if: success()
 
   music_and_weather_updates:
-    if: startsWith(github.event.schedule, '0 9')  # Run only at 9:00 AM
+    if: startsWith(github.event.schedule, '0 7') || startsWith(github.event.schedule, '30 8') || startsWith(github.event.schedule, '0 10') || startsWith(github.event.schedule, '30 11') || startsWith(github.event.schedule, '0 13') || startsWith(github.event.schedule, '30 14') || startsWith(github.event.schedule, '0 16') || startsWith(github.event.schedule, '30 17') || startsWith(github.event.schedule, '0 19')
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
@@ -96,7 +104,7 @@ jobs:
         run: python notify_admin.py "Weather update failed."
 
   nightly_quote:
-    if: startsWith(github.event.schedule, '30 23')  # Run only at 11:30 PM
+    if: startsWith(github.event.schedule, '0 3')  # Run only at 6:30 AM (Tehran time)
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
