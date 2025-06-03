@@ -156,10 +156,8 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
         logging.error("Telegram credentials are not set in environment variables")
         return None
 
-    message = (
-        f"\U0001F3B5 {stylize_text(track_name, 'bold')}\n"
-        f"\U0001F464 {stylize_text(artist_name, 'italic')}\n"
-    )
+    # Prepare the message without the artist name in the description
+    message = f"\U0001F3B5 {stylize_text(track_name, 'bold')}\n"
     if album_name:
         message += f"\U0001F4BF {stylize_text(album_name, 'italic')}\n"
 
@@ -181,10 +179,10 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
                 audio.add_tags()
             except Exception:
                 pass
-            audio.tags.add(TIT2(encoding=3, text=track_name))
-            audio.tags.add(TPE1(encoding=3, text=artist_name))
+            audio.tags.add(TIT2(encoding=3, text=track_name))  # Track name
+            audio.tags.add(TPE1(encoding=3, text=artist_name))  # Artist name
             if album_name:
-                audio.tags.add(TALB(encoding=3, text=album_name))
+                audio.tags.add(TALB(encoding=3, text=album_name))  # Album name
             if album_image:
                 img_data = requests.get(album_image).content
                 audio.tags.add(APIC(
