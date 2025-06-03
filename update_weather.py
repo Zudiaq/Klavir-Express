@@ -10,6 +10,7 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
 WEATHER_MSG_FILE = "weather_msg_id.txt"
 GH_PAT = os.getenv("GH_PAT")
+CITY = "Tehran"
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
@@ -44,12 +45,13 @@ def update_weather_message():
     if weather:
         weather_message = (
             f"⛅️ {stylize_text('Weather Update', 'bold')}\n"
-            f"🌡️ Temperature: {weather['temp']}°C\n"
-            f"💧 Humidity: {weather['humidity']}%\n"
-            f"🌬️ Wind Speed: {weather['wind_speed']} m/s\n"
-            f"📜 Description: {weather['description']}"
+            f"===================\n"
+            f"🌡 {stylize_text('Temperature:', 'italic')} {stylize_text(str(weather['temp']), 'bold')}°{stylize_text('C', 'italic')}\n"
+            f"💧 {stylize_text('Humidity:', 'italic')} {stylize_text(str(weather['humidity']), 'bold')}%\n"
+            f"🌬 {stylize_text('Wind Speed:', 'italic')} {stylize_text(str(weather['wind_speed']), 'bold')} {stylize_text('m/s', 'italic')}\n"
+            f"💬 {stylize_text('Description:', 'italic')} {stylize_text(weather['description'], 'italic')}\n\n"
+            f"📍{stylize_text(CITY, 'italic')}"
         )
-        # Don't append channel hyperlink here as it's already done in edit_message
         message_id = pull_weather_message_id_from_github()
         if message_id:
             result = edit_message(message_id, weather_message)
