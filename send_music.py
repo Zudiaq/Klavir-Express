@@ -20,7 +20,7 @@ def process_music_recommendation():
     """
     Process and send a music recommendation based on current weather and mood.
     Chooses the music API (Spotify or Last.fm) and sends the recommendation to Telegram.
-    Retries with alternative queries or fallback songs if the first attempt fails.
+    Stops retrying after 7 consecutive failed attempts.
     """
     logging.info("Processing music recommendation...")
     weather = get_weather()
@@ -32,7 +32,7 @@ def process_music_recommendation():
     mood = map_weather_to_mood(weather)
     logging.info(f"Determined mood: {mood}")
     music_api = os.getenv('API_SELECTION', 'spotify')
-    max_retries = 3  # Number of retries for alternative queries or fallback songs
+    max_retries = 7  # Stop after 7 consecutive failed attempts
 
     for attempt in range(max_retries):
         logging.info(f"Attempt {attempt + 1} for mood: {mood}")
@@ -65,8 +65,8 @@ def process_music_recommendation():
             logging.warning("No song found. Retrying with a different query or fallback.")
 
     # Notify admins if all attempts fail
-    logging.error("Failed to retrieve or send a music recommendation after multiple attempts.")
-    notify_admins("Failed to retrieve or send a music recommendation. Possible API key exhaustion or no suitable songs found.")
+    logging.error("Failed to retrieve or send a music recommendation after 7 consecutive attempts.")
+    notify_admins("Failed to retrieve or send a music recommendation after 7 consecutive attempts. Possible API key exhaustion or no suitable songs found.")
 
 if __name__ == "__main__":
     process_music_recommendation()
