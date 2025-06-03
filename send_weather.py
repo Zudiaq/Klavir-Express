@@ -9,6 +9,7 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
 WEATHER_MSG_FILE = "weather_msg_id.txt"
 GH_PAT = os.getenv("GH_PAT")
+CITY = "Tehran"
 
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
@@ -64,6 +65,27 @@ def save_weather_message_id_to_github(message_id):
     except Exception as e:
         logging.error(f"Failed to save weather message ID to GitHub: {e}")
 
+def get_uv_risk_level(uv_index):
+    """
+    Determine the risk level of the UV index and return an emoji representation.
+    Args:
+        uv_index (float): The UV index value.
+    Returns:
+        str: Emoji representing the UV risk level.
+    """
+    if uv_index is None:
+        return "❓"  # Unknown
+    if uv_index < 3:
+        return "🟢 Low"
+    elif 3 <= uv_index < 6:
+        return "🟡 Moderate"
+    elif 6 <= uv_index < 8:
+        return "🟠 High"
+    elif 8 <= uv_index < 11:
+        return "🔴 Very High"
+    else:
+        return "⚫️ Extreme"
+
 def send_weather_update():
     """
     Retrieve the current weather and send a formatted update via Telegram.
@@ -71,14 +93,17 @@ def send_weather_update():
     logging.info("Sending weather update...")
     weather = get_weather()
     if weather:
+        uv_risk = get_uv_risk_level(weather['uv_index'])
         weather_message = (
             f"⛅️ {stylize_text('Weather Update', 'bold')}\n"
-            f"🌡️ Temperature: {weather['temp']}°C\n"
-            f"💧 Humidity: {weather['humidity']}%\n"
-            f"🌬️ Wind Speed: {weather['wind_speed']} m/s\n"
-            f"📜 Description: {weather['description']}"
+            f"===================\n"
+            f"🌡 {stylize_text('Temperature:', 'italic')} {stylize_text(str(weather['temp']), 'bold')}°{stylize_text('C', 'italic')}\n"
+            f"💧 {stylize_text('Humidity:', 'italic')} {stylize_text(str(weather['humidity']), 'bold')}%\n"
+            f"🌬 {stylize_text('Wind Speed:', 'italic')} {stylize_text(str(weather['wind_speed']), 'bold')} {stylize_text('m/s', 'italic')}\n"
+            f"💬 {stylize_text('Description:', 'italic')} {stylize_text(weather['description'], 'italic')}\n"
+            f"🌞 {stylize_text('UV Index:', 'italic')} {stylize_text(str(weather['uv_index']), 'bold')} ({uv_risk})\n\n"
+            f"📍{stylize_text(CITY, 'italic')}"
         )
-        # Don't append channel hyperlink here as it's already done in send_message
         result = send_message(weather_message)
         if result and "result" in result and "message_id" in result["result"]:
             message_id = result["result"]["message_id"]
