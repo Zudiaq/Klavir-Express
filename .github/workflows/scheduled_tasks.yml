@@ -2,23 +2,23 @@ name: Scheduled Tasks
 
 on:
   schedule:
-    - cron: '0 5 * * *'  # 8:30 AM (Tehran time - 5:00 AM UTC)
-    - cron: '30 5 * * *'  # 9:00 AM (Tehran time - 5:30 AM UTC)
-    - cron: '0 7 * * *'   # 10:30 AM (Tehran time - 7:00 AM UTC)
-    - cron: '30 8 * * *'  # 12:00 PM (Tehran time - 8:30 AM UTC)
-    - cron: '0 10 * * *'  # 1:30 PM (Tehran time - 10:00 AM UTC)
-    - cron: '30 11 * * *' # 3:00 PM (Tehran time - 11:30 AM UTC)
-    - cron: '0 13 * * *'  # 4:30 PM (Tehran time - 1:00 PM UTC)
-    - cron: '30 14 * * *' # 6:00 PM (Tehran time - 2:30 PM UTC)
-    - cron: '0 16 * * *'  # 7:30 PM (Tehran time - 4:00 PM UTC)
-    - cron: '30 17 * * *' # 9:00 PM (Tehran time - 5:30 PM UTC)
-    - cron: '0 19 * * *'  # 10:30 PM (Tehran time - 7:00 PM UTC)
-    - cron: '30 19 * * *'   # 11:00 AM (Tehran time - 7:30 PM UTC) - Keeping the nightly quote
+    - cron: '43 4 * * *'  # 8:30 AM (Tehran time - 4:43 AM UTC)
+    - cron: '13 5 * * *'  # 9:00 AM (Tehran time - 5:13 AM UTC)
+    - cron: '43 6 * * *'  # 10:30 AM (Tehran time - 6:43 AM UTC)
+    - cron: '13 8 * * *'  # 12:00 PM (Tehran time - 8:13 AM UTC)
+    - cron: '43 9 * * *'  # 1:30 PM (Tehran time - 9:43 AM UTC)
+    - cron: '13 11 * * *' # 3:00 PM (Tehran time - 11:13 AM UTC)
+    - cron: '43 12 * * *' # 4:30 PM (Tehran time - 12:43 PM UTC)
+    - cron: '13 14 * * *' # 6:00 PM (Tehran time - 2:13 PM UTC)
+    - cron: '43 15 * * *' # 7:30 PM (Tehran time - 3:43 PM UTC)
+    - cron: '13 17 * * *' # 9:00 PM (Tehran time - 5:13 PM UTC)
+    - cron: '43 18 * * *' # 10:30 PM (Tehran time - 6:43 PM UTC)
+    - cron: '13 19 * * *' # 11:00 PM (Tehran time - 7:13 PM UTC) - Keeping the nightly quote
 
 jobs:
   morning_weather_quote:
     name: Sending Morning Weather Stats and Daily Quote
-    if: startsWith(github.event.schedule, '0 5')  # Run only at 8:30 AM (Tehran time)
+    if: startsWith(github.event.schedule, '43 4')  # Run only at 8:30 AM (Tehran time)
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
@@ -57,7 +57,7 @@ jobs:
 
   music_and_weather_updates:
     name: Sending Music and Updating Weather
-    if: startsWith(github.event.schedule, '30 5') || startsWith(github.event.schedule, '0 7') || startsWith(github.event.schedule, '30 8') || startsWith(github.event.schedule, '0 10') || startsWith(github.event.schedule, '30 11') || startsWith(github.event.schedule, '0 13') || startsWith(github.event.schedule, '30 14') || startsWith(github.event.schedule, '0 16') || startsWith(github.event.schedule, '30 17') || startsWith(github.event.schedule, '0 19')
+    if: startsWith(github.event.schedule, '13 5') || startsWith(github.event.schedule, '43 6') || startsWith(github.event.schedule, '13 8') || startsWith(github.event.schedule, '43 9') || startsWith(github.event.schedule, '13 11') || startsWith(github.event.schedule, '43 12') || startsWith(github.event.schedule, '13 14') || startsWith(github.event.schedule, '43 15') || startsWith(github.event.schedule, '13 17') || startsWith(github.event.schedule, '43 18')
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
@@ -108,7 +108,7 @@ jobs:
 
   nightly_quote:
     name: Sending Nightly Quote
-    if: startsWith(github.event.schedule, '30 19')  # Run only at 11:00 PM (Tehran time)
+    if: startsWith(github.event.schedule, '13 19')  # Run only at 11:00 PM (Tehran time)
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
