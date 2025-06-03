@@ -136,11 +136,11 @@ def format_mp3_filename(track_name, artist_name, album_name=None):
     Format the MP3 file name to include track name, artist name, and album name in a clean format.
     """
     if album_name:
-        file_name = f"{track_name} - {artist_name} ({album_name}).mp3"
+        file_name = f"{artist_name} - {track_name} ({album_name}).mp3"
     else:
-        file_name = f"{track_name} - {artist_name}.mp3"
-    # Remove underscores and ensure a clean filename
-    return file_name.replace("_", " ").replace("/", "-").strip()
+        file_name = f"{artist_name} - {track_name}.mp3"
+    # Remove unwanted characters and ensure a clean filename
+    return file_name.replace("_", " ").replace("/", "-").replace("+", "and").strip()
 
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
@@ -203,21 +203,6 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
                 notify_admins(f"Failed to validate MP3 file for track '{track_name}' by '{artist_name}'.")
                 os.remove(audio_path)
                 return None
-
-            # --- NEW: Check MP3 duration ---
-            try:
-                audio_info = MP3(audio_path)
-                duration_seconds = int(audio_info.info.length)
-                logging.info(f"MP3 duration: {duration_seconds} seconds")
-                if duration_seconds < 60:
-                    logging.warning(f"MP3 duration is less than 60 seconds ({duration_seconds}s). Deleting file and retrying song selection.")
-                    os.remove(audio_path)
-                    return None
-            except Exception as e:
-                logging.error(f"Error checking MP3 duration: {e}")
-                os.remove(audio_path)
-                return None
-            # --- END NEW ---
 
             # Embed metadata
             logging.info(f"Embedding metadata into MP3 file: {audio_path}")
