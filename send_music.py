@@ -47,7 +47,7 @@ def process_music_recommendation():
             message = f"\U0001F3B5 {stylize_text(track_name, 'bold')}\n"
             if album_name:
                 message += f"\U0001F4BF {stylize_text(album_name, 'italic')}"
-            message = append_channel_id(message)  # Add footer with channel and bot IDs
+            message = append_channel_id(message)  # Add footer with bot and channel IDs
             result = send_to_telegram(
                 track_name, artist_name, album_name, album_image, preview_url, mood
             )
