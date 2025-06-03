@@ -211,6 +211,9 @@ def fetch_youtube_download_link(video_id):
         data = response.read().decode("utf-8")
         result = json.loads(data)
 
+        # Update usage even if the response contains an error
+        update_key_usage(service_name, api_key, reset_day)
+
         if result.get("error"):
             logging.error(f"Error in API response: {result}")
             notify_admins(f"Error fetching download link for video ID {video_id}: {result}")
@@ -222,13 +225,15 @@ def fetch_youtube_download_link(video_id):
             return None
 
         logging.info(f"Download link fetched successfully for video ID {video_id}: {download_link}")
-        update_key_usage(service_name, api_key, reset_day)
         return download_link
     except json.JSONDecodeError as e:
         logging.error(f"Error decoding JSON response: {e}")
     except Exception as e:
         logging.error(f"Error fetching YouTube download link: {e}")
         notify_admins(f"Unexpected error fetching download link for video ID {video_id}: {e}")
+    finally:
+        # Ensure usage is updated even if an exception occurs
+        update_key_usage(service_name, api_key, reset_day)
     return None
 
 # ==========================
