@@ -232,24 +232,30 @@ def get_song_by_mood_spotify(mood):
             playlist_id = str(SPOTIFY_PLAYLIST_URL)
         playlist_url = f"{SPOTIFY_API_URL}playlists/{playlist_id}/tracks"
         try:
-            response = requests.get(playlist_url, headers=headers, params={'limit': 10000})
-            response.raise_for_status()
-            playlist_data = response.json()
-            if not playlist_data or 'items' not in playlist_data:
-                logging.error("Invalid playlist data received.")
+            all_tracks = []
+            next_url = playlist_url
+            while next_url:
+                response = requests.get(next_url, headers=headers)
+                response.raise_for_status()
+                playlist_data = response.json()
+                if 'items' in playlist_data:
+                    all_tracks.extend(playlist_data['items'])
+                next_url = playlist_data.get('next')  # Fetch the next batch of tracks if available
+
+            if not all_tracks:
+                logging.error("No tracks found in the playlist.")
                 return None
-            valid_tracks = [item['track'] for item in playlist_data['items'] if item.get('track')]
-            logging.info(f"Valid tracks retrieved from playlist: {len(valid_tracks)}")
-            import random
+
+            logging.info(f"Total tracks retrieved from playlist: {len(all_tracks)}")
             attempts = 0
-            while attempts < max_attempts and valid_tracks:
-                track = random.choice(valid_tracks)
-                track_name = track.get('name')
-                artist_name = track['artists'][0]['name'] if track.get('artists') else None
-                album_name = track['album']['name'] if track.get('album') else None
-                album_image = track['album']['images'][0]['url'] if track.get('album') and track['album'].get('images') else None
-                preview_url = track.get('preview_url')
-                album_markets = track['album'].get('available_markets', [])
+            while attempts < max_attempts and all_tracks:
+                track = random.choice(all_tracks)
+                track_name = track['track'].get('name')
+                artist_name = track['track']['artists'][0]['name'] if track['track'].get('artists') else None
+                album_name = track['track']['album']['name'] if track['track'].get('album') else None
+                album_image = track['track']['album']['images'][0]['url'] if track['track']['album'] and track['track']['album'].get('images') else None
+                preview_url = track['track'].get('preview_url')
+                album_markets = track['track']['album'].get('available_markets', [])
                 song_key = (track_name, artist_name, album_name)
 
                 # Apply filters
