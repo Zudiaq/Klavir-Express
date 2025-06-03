@@ -6,6 +6,7 @@ on:
 jobs:
 
   panel:
+    name: Start Bot Panel
     runs-on: ubuntu-latest
 
     concurrency: # Prevent overlapping workflows
