@@ -5,6 +5,8 @@ from weather import get_weather
 from telegram_bot import edit_message
 from send_quote import stylize_text
 from telegram_bot import append_channel_id
+from datetime import datetime
+from pytz import timezone
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
@@ -36,6 +38,26 @@ def pull_weather_message_id_from_github():
         logging.error(f"Failed to pull weather message ID from GitHub: {e}")
         return None
 
+def get_uv_risk_level(uv_index, is_after_sunset=False):
+    """
+    Determine the risk level of the UV index and return an emoji representation.
+    If it's after sunset, return the UV index with a strikethrough.
+    """
+    if uv_index is None:
+        return "❓"  # Unknown
+    if is_after_sunset:
+        return f"~~{uv_index}~~"  # Strikethrough for UV index after sunset
+    if uv_index < 3:
+        return "🟢 Low"
+    elif 3 <= uv_index < 6:
+        return "🟡 Moderate"
+    elif 6 <= uv_index < 8:
+        return "🟠 High"
+    elif 8 <= uv_index < 11:
+        return "🔴 Very High"
+    else:
+        return "⚫️ Extreme"
+
 def update_weather_message():
     """
     Update the previously sent weather message with the latest weather data.
@@ -43,13 +65,17 @@ def update_weather_message():
     logging.info("Updating weather message...")
     weather = get_weather()
     if weather:
+        tehran_time = datetime.now(timezone("Asia/Tehran"))
+        is_after_sunset = tehran_time.hour >= 19  # Check if it's after 7 PM
+        uv_risk = get_uv_risk_level(weather['uv_index'], is_after_sunset)
         weather_message = (
             f"⛅️ {stylize_text('Weather Update', 'bold')}\n"
             f"===================\n"
             f"🌡 {stylize_text('Temperature:', 'italic')} {stylize_text(str(weather['temp']), 'bold')}°{stylize_text('C', 'italic')}\n"
             f"💧 {stylize_text('Humidity:', 'italic')} {stylize_text(str(weather['humidity']), 'bold')}%\n"
             f"🌬 {stylize_text('Wind Speed:', 'italic')} {stylize_text(str(weather['wind_speed']), 'bold')} {stylize_text('m/s', 'italic')}\n"
-            f"💬 {stylize_text('Description:', 'italic')} {stylize_text(weather['description'], 'italic')}\n\n"
+            f"💬 {stylize_text('Description:', 'italic')} {stylize_text(weather['description'], 'italic')}\n"
+            f"🌞 {stylize_text('UV Index:', 'italic')} {uv_risk}\n\n"
             f"📍{stylize_text(CITY, 'italic')}"
         )
         message_id = pull_weather_message_id_from_github()
