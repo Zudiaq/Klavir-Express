@@ -12,7 +12,7 @@ load_dotenv()
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_API_URL = "https://api.spotify.com/v1/"
-SPOTIFY_PLAYLIST_URL = ""
+SPOTIFY_PLAYLIST_URL = "https://open.spotify.com/playlist/5cqqGsaya5ito8lAtWE9Ar?si=2ff577bece7a4d5e"
 
 GH_PAT = os.getenv('GH_PAT')  # GitHub Personal Access Token
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
@@ -216,7 +216,7 @@ def get_song_by_mood_spotify(mood):
             playlist_id = str(SPOTIFY_PLAYLIST_URL)
         playlist_url = f"{SPOTIFY_API_URL}playlists/{playlist_id}/tracks"
         try:
-            response = requests.get(playlist_url, headers=headers, params={'limit': 100})
+            response = requests.get(playlist_url, headers=headers, params={'limit': 10000})
             response.raise_for_status()
             playlist_data = response.json()
             if not playlist_data or 'items' not in playlist_data:
