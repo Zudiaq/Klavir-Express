@@ -159,7 +159,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
     # Prepare the message without the artist name in the description
     message = f"\U0001F3B5 {stylize_text(track_name, 'bold')}\n"
     if album_name:
-        message += f"\U0001F4BF {stylize_text(album_name, 'italic')}\n"
+        message += f"\U0001F4BF {stylize_text(album_name, 'italic')}"
 
     logging.info(f"Sending music recommendation: {message}")
     # Search and download audio from YouTube
