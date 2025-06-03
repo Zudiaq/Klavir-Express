@@ -6,6 +6,7 @@ on:
 jobs:
 
   restart:
+    name: Restart Panel
     runs-on: ubuntu-latest
     environment: Deployment 1
     env:
