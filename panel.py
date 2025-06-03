@@ -696,10 +696,13 @@ async def trigger_restart_workflow():
     else:
         print(f"Failed to trigger the workflow: {response.status_code}, {response.text}")
 
+    # Notify GitHub Actions of success before stopping the script
+    print("::notice::Panel workflow completed successfully. Preparing to stop the script.")
+
     # Wait 1 minute before stopping the script
     await asyncio.sleep(60)
     print("Stopping the panel...")
-    sys.exit(0)
+    os._exit(0)  # Use os._exit to terminate the process directly without raising exceptions
 
 # ==========================
 # Main Function
