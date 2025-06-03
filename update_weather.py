@@ -41,22 +41,24 @@ def pull_weather_message_id_from_github():
 def get_uv_risk_level(uv_index, is_after_sunset=False):
     """
     Determine the risk level of the UV index and return an emoji representation.
-    If it's after sunset, return the UV index with a strikethrough.
+    If it's after sunset, return the entire UV index text with a strikethrough.
     """
     if uv_index is None:
         return "❓"  # Unknown
-    if is_after_sunset:
-        return f"~~{uv_index}~~"  # Strikethrough for UV index after sunset
+    risk_text = ""
     if uv_index < 3:
-        return "🟢 Low"
+        risk_text = "🟢 Low"
     elif 3 <= uv_index < 6:
-        return "🟡 Moderate"
+        risk_text = "🟡 Moderate"
     elif 6 <= uv_index < 8:
-        return "🟠 High"
+        risk_text = "🟠 High"
     elif 8 <= uv_index < 11:
-        return "🔴 Very High"
+        risk_text = "🔴 Very High"
     else:
-        return "⚫️ Extreme"
+        risk_text = "⚫️ Extreme"
+    
+    uv_text = f"{uv_index} ({risk_text})"
+    return f"~~{uv_text}~~" if is_after_sunset else uv_text
 
 def update_weather_message():
     """
