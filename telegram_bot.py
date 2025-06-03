@@ -187,7 +187,7 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
             except Exception:
                 pass
             audio.tags.add(TIT2(encoding=3, text=track_name))  # Track name
-            audio.tags.add(TPE1(encoding=3, text=artist_name))  # Artist name
+            audio.tags.add(TPE1(encoding=3, text=artist_name if artist_name else "Unknown Artist"))  # Artist name
             if album_name:
                 audio.tags.add(TALB(encoding=3, text=album_name))  # Album name
             if album_image:
