@@ -6,6 +6,8 @@ from spotify import get_song_by_mood_spotify, load_sent_songs, save_sent_song
 from lastfm import get_song_by_mood
 from telegram_bot import send_music_recommendation as send_to_telegram
 from telegram_bot import notify_admins
+from send_quote import stylize_text
+from telegram_bot import append_channel_id
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
@@ -42,6 +44,10 @@ def process_music_recommendation():
         if song:
             track_name, artist_name, album_name, album_image, preview_url = song
             logging.info(f"Selected song: {track_name} by {artist_name} (Album: {album_name})")
+            message = f"\U0001F3B5 {stylize_text(track_name, 'bold')}\n"
+            if album_name:
+                message += f"\U0001F4BF {stylize_text(album_name, 'italic')}"
+            message = append_channel_id(message)  # Add footer with channel and bot IDs
             result = send_to_telegram(
                 track_name, artist_name, album_name, album_image, preview_url, mood
             )
