@@ -64,7 +64,7 @@ def append_channel_id(message):
     stylized_channel = stylize_text("Klavir Express", "bold")
     bot_hyperlink = f"<a href='https://t.me/{bot_id.lstrip('@')}'>{stylized_bot}</a>"
     channel_hyperlink = f"<a href='https://t.me/{channel_id.lstrip('@')}'>{stylized_channel}</a>"
-    return f"{message}\n\n🤖 {bot_hyperlink} <a href='https://t.me/{bot_id.lstrip('@')}'>\u200b</a>\n🎹 {channel_hyperlink} <a href='https://t.me/{channel_id.lstrip('@')}'>\u200b</a>"
+    return f"{message}\n\n🤖 {bot_hyperlink}\n🎹 {channel_hyperlink}"
 
 def send_message(message):
     """
