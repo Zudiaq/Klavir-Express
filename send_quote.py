@@ -69,7 +69,7 @@ def send_quote_message():
         elif 18 <= tehran_time.hour < 24:  # Night
             styled_quote += f"\n\n🌙 {stylize_text('Good Night', 'italic')}"
 
-        styled_quote = append_channel_id(styled_quote)  # Add footer with channel and bot IDs
+        styled_quote = append_channel_id(styled_quote)  # Add footer with bot and channel IDs
         result = send_message(styled_quote)
         logging.debug(f"Quote message send result: {result}")
     else:
