@@ -26,6 +26,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+EXCLUDED_ARTISTS = ["Taylor Swift"]  # List of artists to exclude
+ALLOWED_REGIONS = ["US", "EU"]  # Allowed regions (e.g., US for America, EU for Europe)
 
 def get_spotify_token():
     """
@@ -190,6 +192,20 @@ def save_sent_song(track_name, artist_name, album_name):
         logging.warning(f"Could not save sent song: {e}")
 
 
+def is_artist_allowed(artist_name):
+    """
+    Check if the artist is allowed based on the exclusion list.
+    """
+    return artist_name not in EXCLUDED_ARTISTS
+
+def is_region_allowed(album_markets):
+    """
+    Check if the album's region is allowed based on the allowed regions list.
+    """
+    if not album_markets:
+        return False
+    return any(region in ALLOWED_REGIONS for region in album_markets)
+
 def get_song_by_mood_spotify(mood):
     """
     Get song recommendations based on mood using Spotify's recommendation API or a specific playlist if configured.
@@ -233,7 +249,16 @@ def get_song_by_mood_spotify(mood):
                 album_name = track['album']['name'] if track.get('album') else None
                 album_image = track['album']['images'][0]['url'] if track.get('album') and track['album'].get('images') else None
                 preview_url = track.get('preview_url')
+                album_markets = track['album'].get('available_markets', [])
                 song_key = (track_name, artist_name, album_name)
+
+                # Apply filters
+                if not is_artist_allowed(artist_name):
+                    logging.info(f"Artist '{artist_name}' is excluded. Skipping track.")
+                    continue
+                if not is_region_allowed(album_markets):
+                    logging.info(f"Track '{track_name}' by '{artist_name}' is not available in allowed regions. Skipping track.")
+                    continue
 
                 # Update usage for every attempt
                 update_key_usage("spotify", SPOTIFY_CLIENT_ID, reset_day=None)
@@ -258,8 +283,16 @@ def get_song_by_mood_spotify(mood):
             # Update usage for every failed attempt
             update_key_usage("spotify", SPOTIFY_CLIENT_ID, reset_day=None)
             return None
-        track_name, artist_name, album_name, album_image, preview_url = result
+        track_name, artist_name, album_name, album_image, preview_url, album_markets = result
         song_key = (track_name, artist_name, album_name)
+
+        # Apply filters
+        if not is_artist_allowed(artist_name):
+            logging.info(f"Artist '{artist_name}' is excluded. Skipping track.")
+            continue
+        if not is_region_allowed(album_markets):
+            logging.info(f"Track '{track_name}' by '{artist_name}' is not available in allowed regions. Skipping track.")
+            continue
 
         # Update usage for every attempt
         update_key_usage("spotify", SPOTIFY_CLIENT_ID, reset_day=None)
@@ -283,7 +316,7 @@ def direct_search(mood, headers):
         headers (dict): Authorization headers
         
     Returns:
-        tuple: (track_name, artist_name, album_name, album_image, preview_url) or None if error
+        tuple: (track_name, artist_name, album_name, album_image, preview_url, album_markets) or None if error
     """
     search_url = f"{SPOTIFY_API_URL}search"
     
@@ -316,9 +349,10 @@ def direct_search(mood, headers):
                 album_name = track['album']['name']
                 album_image = track['album']['images'][0]['url'] if track['album']['images'] else None
                 preview_url = track['preview_url']
-                
+                album_markets = track['album'].get('available_markets', [])
+
                 logging.info(f"Found track via search: {track_name} by {artist_name}")
-                return track_name, artist_name, album_name, album_image, preview_url
+                return track_name, artist_name, album_name, album_image, preview_url, album_markets
                 
             # Handle playlist search results by getting a track from a playlist
             elif 'playlists' in response_data and response_data['playlists']['items']:
