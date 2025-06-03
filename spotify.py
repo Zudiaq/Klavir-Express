@@ -3,6 +3,7 @@ import os
 import logging
 import base64
 import yaml
+import random 
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
 from youtube_downloader import update_key_usage
