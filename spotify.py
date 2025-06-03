@@ -5,13 +5,14 @@ import base64
 import yaml
 from dotenv import load_dotenv
 from mood_mapping import get_spotify_recommendations_params
+from youtube_downloader import update_key_usage
 
 load_dotenv()
 
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_API_URL = "https://api.spotify.com/v1/"
-SPOTIFY_PLAYLIST_URL = ""
+SPOTIFY_PLAYLIST_URL = "https://open.spotify.com/playlist/5cqqGsaya5ito8lAtWE9Ar?si=e1f74c32e34149a3"
 
 GH_PAT = os.getenv('GH_PAT')  # GitHub Personal Access Token
 GITHUB_REPO = "Zudiaq/youtube-mp3-apis"
@@ -233,6 +234,10 @@ def get_song_by_mood_spotify(mood):
                 album_image = track['album']['images'][0]['url'] if track.get('album') and track['album'].get('images') else None
                 preview_url = track.get('preview_url')
                 song_key = (track_name, artist_name, album_name)
+
+                # Update usage for every attempt
+                update_key_usage("spotify", SPOTIFY_CLIENT_ID, reset_day=None)
+
                 if song_key not in sent_songs:
                     logging.info(f"Selected unique song: {song_key}")
                     save_sent_song(track_name, artist_name, album_name)
@@ -250,9 +255,15 @@ def get_song_by_mood_spotify(mood):
     for _ in range(max_attempts):
         result = direct_search(mood, headers)
         if not result:
+            # Update usage for every failed attempt
+            update_key_usage("spotify", SPOTIFY_CLIENT_ID, reset_day=None)
             return None
         track_name, artist_name, album_name, album_image, preview_url = result
         song_key = (track_name, artist_name, album_name)
+
+        # Update usage for every attempt
+        update_key_usage("spotify", SPOTIFY_CLIENT_ID, reset_day=None)
+
         if song_key not in sent_songs:
             logging.info(f"Selected unique song: {song_key}")
             save_sent_song(track_name, artist_name, album_name)
