@@ -203,6 +203,21 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
                 os.remove(audio_path)
                 return None
 
+            # --- NEW: Check MP3 duration ---
+            try:
+                audio_info = MP3(audio_path)
+                duration_seconds = int(audio_info.info.length)
+                logging.info(f"MP3 duration: {duration_seconds} seconds")
+                if duration_seconds < 60:
+                    logging.warning(f"MP3 duration is less than 60 seconds ({duration_seconds}s). Deleting file and retrying song selection.")
+                    os.remove(audio_path)
+                    return None
+            except Exception as e:
+                logging.error(f"Error checking MP3 duration: {e}")
+                os.remove(audio_path)
+                return None
+            # --- END NEW ---
+
             # Embed metadata
             logging.info(f"Embedding metadata into MP3 file: {audio_path}")
             audio = MP3(audio_path, ID3=ID3)
