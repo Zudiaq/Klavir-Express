@@ -174,36 +174,6 @@ def send_music_recommendation(track_name, artist_name, album_name=None, album_im
         audio_path = formatted_path
 
         try:
-            # Convert .m4a to .mp3 if necessary
-            if audio_path.endswith(".m4a"):
-                logging.info(f"Converting {audio_path} to MP3 format.")
-                mp3_path = audio_path.replace(".m4a", ".mp3")
-                try:
-                    audio = AudioSegment.from_file(audio_path, format="m4a")
-                    audio.export(mp3_path, format="mp3")
-                    os.remove(audio_path)  # Remove the original .m4a file
-                    audio_path = mp3_path
-                    logging.info(f"Conversion successful: {audio_path}")
-                except CouldntDecodeError as e:
-                    logging.error(f"Failed to decode .m4a file: {e}")
-                    os.remove(audio_path)
-                    return None
-                except Exception as e:
-                    logging.error(f"Error during conversion: {e}")
-                    os.remove(audio_path)
-                    return None
-
-            # Log file size after conversion
-            file_size = os.path.getsize(audio_path)
-            logging.info(f"Converted MP3 file size: {file_size} bytes")
-
-            # Validate the MP3 file
-            if not is_valid_mp3(audio_path):
-                logging.error(f"Converted file is not a valid MP3: {audio_path}")
-                notify_admins(f"Failed to validate MP3 file for track '{track_name}' by '{artist_name}'.")
-                os.remove(audio_path)
-                return None
-
             # Embed metadata
             logging.info(f"Embedding metadata into MP3 file: {audio_path}")
             audio = MP3(audio_path, ID3=ID3)
