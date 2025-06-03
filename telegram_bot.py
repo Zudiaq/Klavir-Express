@@ -139,7 +139,8 @@ def format_mp3_filename(track_name, artist_name, album_name=None):
         file_name = f"{track_name} - {artist_name} ({album_name}).mp3"
     else:
         file_name = f"{track_name} - {artist_name}.mp3"
-    return file_name.replace(" ", "_").replace("/", "-").strip()
+    # Remove underscores and ensure a clean filename
+    return file_name.replace("_", " ").replace("/", "-").strip()
 
 def send_music_recommendation(track_name, artist_name, album_name=None, album_image=None, preview_url=None, mood=None):
     """
