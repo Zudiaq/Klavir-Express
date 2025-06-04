@@ -17,7 +17,7 @@ jobs:
 
       - name: Download MP3 file
         run: |
-          wget -O test.mp3 "https://api-media-downloader.api-hub.cloud/tunnel?id=kMttXNk-t0U4QKJ4yXM9g&exp=1749069073587&sig=sKBJpSCUXxCp_ZgXOqIHi9N7qYVQd3gAZsb3ayQV3W4&sec=XJeXrxDbejSc4LRsyrTvZEUrqXxGr7E_ctfUJOu-oU0&iv=9hbyzSJKXaPiuJ3SKpb_Xg","filename":"youtube_q7qdpyjHyNk_audio.mp3"
+          wget -O test.mp3 "https://api-media-downloader.api-hub.cloud/tunnel?id=zGSKqFGDyflrQzTDpoLad&exp=1749069295332&sig=sJqHc4adEBteDnn53cKrj3VEfrsujS6y4j7roc9P22E&sec=Fq4yHP8HlMeNlg6A1uY_zv-Rrt8DWnmgm9JgfSLpmHY&iv=mOEaPOgZ9ENgtGt-LKKkwg"
 
       - name: Verify MP3 download
         run: |
