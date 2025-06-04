@@ -225,6 +225,7 @@ def fetch_youtube_download_link(video_id):
             return None
 
         logging.info(f"Download link fetched successfully for video ID {video_id}: {download_link}")
+
         return download_link
     except json.JSONDecodeError as e:
         logging.error(f"Error decoding JSON response: {e}")
@@ -236,43 +237,104 @@ def fetch_youtube_download_link(video_id):
         update_key_usage(service_name, api_key, reset_day)
     return None
 
-# ==========================
-# Main Functionality
-# ==========================
+
+def fetch_cloud_api_hub_download_link(video_id):
+    """
+    Fetch the MP3 download link using the new Cloud API Hub service.
+    """
+    service_name = "cloud-api-hub-youtube-downloader.p.rapidapi.com"
+    api_key, reset_day = get_available_key(service_name)
+    if not api_key:
+        logging.error(f"No available API keys for {service_name}.")
+        return None
+
+    conn = http.client.HTTPSConnection("cloud-api-hub-youtube-downloader.p.rapidapi.com")
+    headers = {
+        'x-rapidapi-key': api_key,
+        'x-rapidapi-host': service_name
+    }
+    try:
+        logging.info(f"Sending request to fetch MP3 download link for video ID {video_id} using Cloud API Hub.")
+        conn.request("GET", f"/mux?id={video_id}&quality=max&codec=h264&audioFormat=mp3&language=en&audioOnly=true", headers=headers)
+        response = conn.getresponse()
+        data = response.read().decode("utf-8")
+        result = json.loads(data)
+
+        # Update usage even if the response contains an error
+        update_key_usage(service_name, api_key, reset_day)
+
+        if result.get("status") != "tunnel":
+            logging.error(f"Error in API response: {result}")
+            notify_admins(f"Error fetching download link for video ID {video_id} using Cloud API Hub: {result}")
+            return None
+
+        download_link = result.get("url")
+        if not download_link:
+            logging.error(f"No download link found in the response for video ID {video_id} using Cloud API Hub. Full response: {result}")
+            return None
+
+        logging.info(f"Download link fetched successfully for video ID {video_id} using Cloud API Hub: {download_link}")
+
+        return download_link
+    except json.JSONDecodeError as e:
+        logging.error(f"Error decoding JSON response: {e}")
+    except Exception as e:
+        logging.error(f"Error fetching download link using Cloud API Hub: {e}")
+        notify_admins(f"Unexpected error fetching download link for video ID {video_id} using Cloud API Hub: {e}")
+    finally:
+        # Ensure usage is updated even if an exception occurs
+        update_key_usage(service_name, api_key, reset_day)
+    return None
+
+
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
     """
     Search YouTube for the track and download the audio as MP3.
+    Retry up to 3 times if the initial attempt fails.
     Returns the path to the downloaded MP3 file or None if failed.
     """
-    try:
-        query = f"{track_name} {artist_name}"
-        if album_name:
-            query += f" {album_name}"
-        video_url = search_youtube_video(query, artist_name)
-        if not video_url:
-            logging.error("No YouTube video found for the query")
-            return None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            # Increment API usage only for YouTube API requests
+            increment_api_usage()
 
-        mp3_url = fetch_youtube_download_link(video_url)
-        if not mp3_url:
-            logging.error("Failed to fetch YouTube MP3 download link")
-            return None
+            # Search for the video
+            query = f"{track_name} {artist_name}"
+            if album_name:
+                query += f" {album_name}"
+            video_url = search_youtube_video(query, artist_name)  # Pass artist_name explicitly
+            if not video_url:
+                logging.error(f"No YouTube video found for the query (Attempt {attempt + 1}/{max_retries})")
+                continue
 
-        response = requests.get(mp3_url, stream=True)
-        if response.status_code == 200:
-            file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
-            logging.info(f"Saving MP3 file to: {file_name}")
-            with open(file_name, 'wb') as f:
-                for chunk in response.iter_content(1024):
-                    f.write(chunk)
-            logging.info(f"MP3 file downloaded successfully: {file_name}")
-            return file_name
-        else:
-            logging.error(f"Failed to download MP3 file. HTTP status code: {response.status_code}. Response: {response.text}")
-            return None
-    except Exception as e:
-        logging.error(f"Error in search_and_download_youtube_mp3: {e}")
-        return None
+            # Try the new Cloud API Hub first
+            mp3_url = fetch_cloud_api_hub_download_link(video_url)
+            if not mp3_url:
+                logging.warning(f"Failed to fetch MP3 download link using Cloud API Hub (Attempt {attempt + 1}/{max_retries}). Trying the old API.")
+                mp3_url = fetch_youtube_download_link(video_url)
+
+            if not mp3_url:
+                logging.error(f"Failed to fetch YouTube MP3 download link (Attempt {attempt + 1}/{max_retries})")
+                continue
+
+            # Download the MP3 file
+            response = requests.get(mp3_url, stream=True)
+            if response.status_code == 200:
+                file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
+                with open(file_name, 'wb') as f:
+                    for chunk in response.iter_content(1024):
+                        f.write(chunk)
+
+                return file_name
+            else:
+                logging.error(f"Failed to download MP3 file (Attempt {attempt + 1}/{max_retries})")
+                continue
+        except Exception as e:
+            logging.error(f"Error in search_and_download_youtube_mp3 (Attempt {attempt + 1}/{max_retries}): {e}")
+
+    logging.error("All attempts to fetch YouTube MP3 download link failed.")
+    return None
 
 def search_youtube_video(query, artist_name):
     """
