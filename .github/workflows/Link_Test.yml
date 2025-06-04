@@ -1,0 +1,36 @@
+name: Test MP3 Download
+
+on:
+  workflow_dispatch:
+
+jobs:
+  download_mp3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Download MP3 file
+        run: |
+          wget -O test.mp3 "https://api-media-downloader.api-hub.cloud/tunnel?id=kMttXNk-t0U4QKJ4yXM9g&exp=1749069073587&sig=sKBJpSCUXxCp_ZgXOqIHi9N7qYVQd3gAZsb3ayQV3W4&sec=XJeXrxDbejSc4LRsyrTvZEUrqXxGr7E_ctfUJOu-oU0&iv=9hbyzSJKXaPiuJ3SKpb_Xg","filename":"youtube_q7qdpyjHyNk_audio.mp3"
+
+      - name: Verify MP3 download
+        run: |
+          if [ -f "test.mp3" ]; then
+            echo "MP3 file downloaded successfully."
+          else
+            echo "Failed to download MP3 file."
+            exit 1
+          fi
+          file_size=$(stat -c%s "test.mp3")
+          echo "File size: $file_size bytes"
+          if [ $file_size -gt 0 ]; then
+            echo "File size is valid."
+          else
+            echo "File size is invalid."
+            exit 1
