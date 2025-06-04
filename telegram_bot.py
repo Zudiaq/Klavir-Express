@@ -8,6 +8,7 @@ import logging
 from dotenv import load_dotenv
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
+import yaml
 
 load_dotenv()
 
@@ -238,39 +239,68 @@ def is_valid_mp3(file_path):
         logging.error(f"MP3 validation failed for {file_path}: {e}")
         return False
 
+def increment_api_usage():
+    """
+    Increment the API usage count in a YAML file.
+    """
+    yaml_file = os.getenv("API_USAGE_FILE", "api_usage.yaml")
+    try:
+        if os.path.exists(yaml_file):
+            with open(yaml_file, "r") as file:
+                data = yaml.safe_load(file) or {}
+        else:
+            data = {}
+
+        data["usage_count"] = data.get("usage_count", 0) + 1
+
+        with open(yaml_file, "w") as file:
+            yaml.safe_dump(data, file)
+    except Exception as e:
+        logging.error(f"Failed to increment API usage: {e}")
+
 def search_and_download_youtube_mp3(track_name, artist_name, album_name=None):
     """
     Search YouTube for the track and download the audio as MP3.
+    Retry up to 3 times if the initial attempt fails.
     Returns the path to the downloaded MP3 file or None if failed.
     """
-    try:
-        # Search for the video
-        query = f"{track_name} {artist_name}"
-        if album_name:
-            query += f" {album_name}"
-        video_url = search_youtube_video(query, artist_name)  # Pass artist_name explicitly
-        if not video_url:
-            logging.error("No YouTube video found for the query")
-            return None
-        # Get the download link
-        mp3_url = fetch_youtube_download_link(video_url)
-        if not mp3_url:
-            logging.error("Failed to fetch YouTube MP3 download link")
-            return None
-        # Download the MP3 file
-        response = requests.get(mp3_url, stream=True)
-        if response.status_code == 200:
-            file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
-            with open(file_name, 'wb') as f:
-                for chunk in response.iter_content(1024):
-                    f.write(chunk)
-            return file_name
-        else:
-            logging.error("Failed to download MP3 file")
-            return None
-    except Exception as e:
-        logging.error(f"Error in search_and_download_youtube_mp3: {e}")
-        return None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            # Increment API usage only for YouTube API requests
+            increment_api_usage()
+
+            # Search for the video
+            query = f"{track_name} {artist_name}"
+            if album_name:
+                query += f" {album_name}"
+            video_url = search_youtube_video(query, artist_name)  # Pass artist_name explicitly
+            if not video_url:
+                logging.error(f"No YouTube video found for the query (Attempt {attempt + 1}/{max_retries})")
+                continue
+
+            # Get the download link
+            mp3_url = fetch_youtube_download_link(video_url)
+            if not mp3_url:
+                logging.error(f"Failed to fetch YouTube MP3 download link (Attempt {attempt + 1}/{max_retries})")
+                continue
+
+            # Download the MP3 file
+            response = requests.get(mp3_url, stream=True)
+            if response.status_code == 200:
+                file_name = f"{track_name}_{artist_name}.mp3".replace(" ", "_")
+                with open(file_name, 'wb') as f:
+                    for chunk in response.iter_content(1024):
+                        f.write(chunk)
+                return file_name
+            else:
+                logging.error(f"Failed to download MP3 file (Attempt {attempt + 1}/{max_retries})")
+                continue
+        except Exception as e:
+            logging.error(f"Error in search_and_download_youtube_mp3 (Attempt {attempt + 1}/{max_retries}): {e}")
+
+    logging.error("All attempts to fetch YouTube MP3 download link failed.")
+    return None
 
 def notify_admins(message):
     """
@@ -286,6 +316,7 @@ def notify_admins(message):
         try:
             response = requests.post(f'https://api.telegram.org/bot{os.getenv("TELEGRAM_BOT_TOKEN")}/sendMessage', json=payload)
             response.raise_for_status()
+            logging.info(f"Notification sent to admin {admin_id}")
         except requests.exceptions.RequestException as e:
             logging.error(f"Failed to notify admin {admin_id}: {e}")
 
