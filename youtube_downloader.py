@@ -234,9 +234,6 @@ def fetch_youtube_download_link(video_id):
     except Exception as e:
         logging.error(f"Error fetching YouTube download link: {e}")
         notify_admins(f"Unexpected error fetching download link for video ID {video_id}: {e}")
-    finally:
-        # Ensure usage is updated even if an exception occurs
-        update_key_usage(service_name, api_key, reset_day)
     return None
 
 
